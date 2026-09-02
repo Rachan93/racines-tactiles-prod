@@ -77,6 +77,8 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
                 'required',
                 'string',
                 'max:30',
+                'regex:/^\+?[0-9\s().-]{6,30}$/',
+                Rule::unique(User::class, 'phone_number')->ignore($user->id),
             ],
 
             'address' => [

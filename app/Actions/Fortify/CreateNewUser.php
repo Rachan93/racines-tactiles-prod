@@ -90,6 +90,8 @@ class CreateNewUser implements CreatesNewUsers
                     'required',
                     'string',
                     'max:30',
+                    'regex:/^\+?[0-9\s().-]{6,30}$/',
+                    Rule::unique(User::class, 'phone_number'),
                 ],
 
                 'address' => [
@@ -178,7 +180,7 @@ class CreateNewUser implements CreatesNewUsers
 
             'billing' => $billing,
         ];
- // pour insérer les données de facturation uniquement si la checkbox 'billing' est cochée
+        // pour insérer les données de facturation uniquement si la checkbox 'billing' est cochée
         if ($billing) {
             $userData += [
                 'company_name' => $normalized['company_name'],

@@ -1,2 +1,14 @@
 User-agent: *
-Disallow:
+Allow: /
+
+Disallow: /admin
+Disallow: /mon-compte
+Disallow: /parametres
+Disallow: /auth/
+Disallow: /reservations
+Disallow: /attendees
+Disallow: /lessons/
+Disallow: /test/
+Disallow: /validation-test
+
+Sitemap: https://rachafianas.be/sitemap.xml

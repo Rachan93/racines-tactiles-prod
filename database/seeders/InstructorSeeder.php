@@ -22,8 +22,8 @@ class InstructorSeeder extends Seeder
             'last_name' => 'Hick',
             ]);
         Instructor::factory()->create([
-            'first_name' => 'Jean',
-            'last_name' => 'M. Heerde',
+            'first_name' => 'Gordon',
+            'last_name' => 'Freeman',
         ]);
         Instructor::factory()->create([
             'first_name' => 'Jill',

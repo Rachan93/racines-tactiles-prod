@@ -18,12 +18,14 @@ import {
     User,
     Settings,
     LogOut,
-    Sparkles,
+    ShieldUser,
+    ExternalLink,
 } from "lucide-vue-next";
 import CookieBanner from "@/Components/custom/CookieBanner.vue";
 
 const page = usePage();
 const currentUser = computed(() => page.props.auth?.user);
+const isAdmin = computed(() => Number(currentUser.value?.role_id) === 1);
 const isAteliersActive = computed(
     () => page.url.split(/[?#]/)[0] === route("ateliers.index"),
 );
@@ -215,6 +217,23 @@ const logout = () => {
                                     >
                                         <User class="w-4 h-4 text-earth" />
                                         <span>Espace membre</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                                <!-- Lien Panneau Admin -->
+                                <DropdownMenuItem v-if="isAdmin" as-child>
+                                    <Link
+                                        :href="route('dashboard.index')"
+                                        class="cursor-pointer flex items-center gap-2 py-2 px-2 rounded-md text-xs sm:text-sm hover:bg-blue-100 hover:text-blue-800 transition-colors"
+                                    >
+                                        <ShieldUser
+                                            class="w-4 h-4 text-gray-500"
+                                        />
+
+                                        <span>Panneau admin</span>
+
+                                        <ExternalLink
+                                            class="w-3.5 h-3.5 text-gray-400 ml-auto"
+                                        />
                                     </Link>
                                 </DropdownMenuItem>
 
