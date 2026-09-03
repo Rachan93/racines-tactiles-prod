@@ -53,9 +53,7 @@ const validate = (field) => {
 
 const fieldClass = (field) => [
     "h-11 bg-white border-gray-200",
-    form.invalid(field)
-        ? "border-red-400 focus-visible:ring-red-200"
-        : "",
+    form.invalid(field) ? "border-red-400 focus-visible:ring-red-200" : "",
 ];
 
 const submit = () => {
@@ -63,10 +61,7 @@ const submit = () => {
         preserveScroll: true,
 
         onSuccess: () => {
-            form.reset(
-                "password",
-                "password_confirmation"
-            );
+            form.reset("password", "password_confirmation");
         },
     });
 };
@@ -86,8 +81,8 @@ const submit = () => {
                 </h1>
 
                 <p class="mt-3 text-sm text-gray-500 max-w-xl mx-auto">
-                    Inscrivez-vous pour réserver vos cours,
-                    gérer vos présences et suivre vos modules.
+                    Inscrivez-vous pour réserver vos cours, gérer vos présences
+                    et suivre vos modules.
                 </p>
             </div>
 
@@ -168,22 +163,21 @@ const submit = () => {
 
                     <!-- Email -->
                     <div class="space-y-2">
-                        <Label
-                            for="email"
-                            class="text-sm font-semibold"
-                        >
+                        <Label for="email" class="text-sm font-semibold">
                             Adresse e-mail
                         </Label>
 
-                  <Input
-    id="email"
-    v-model="form.email"
-    type="email"
-    @change="() => {
-        console.log('CHANGE EMAIL', form.email);
-        form.validate('email');
-    }"
-/>
+                        <Input
+                            id="email"
+                            v-model="form.email"
+                            type="email"
+                            @change="
+                                () => {
+                                    console.log('CHANGE EMAIL', form.email);
+                                    form.validate('email');
+                                }
+                            "
+                        />
 
                         <p
                             v-if="form.invalid('email')"
@@ -196,10 +190,7 @@ const submit = () => {
                     <div class="grid sm:grid-cols-2 gap-4">
                         <!-- Birthday -->
                         <div class="space-y-2">
-                            <Label
-                                for="birthday"
-                                class="text-sm font-semibold"
-                            >
+                            <Label for="birthday" class="text-sm font-semibold">
                                 Date de naissance
                             </Label>
 
@@ -254,19 +245,13 @@ const submit = () => {
                 <!-- ========================================= -->
                 <!-- ADRESSE                                   -->
                 <!-- ========================================= -->
-                <section
-                    class="p-6 sm:p-8 space-y-5 border-t border-gray-100"
-                >
+                <section class="p-6 sm:p-8 space-y-5 border-t border-gray-100">
                     <div>
-                        <h2 class="text-lg font-bold text-gray-900">
-                            Adresse
-                        </h2>
+                        <h2 class="text-lg font-bold text-gray-900">Adresse</h2>
                     </div>
 
                     <div class="space-y-2">
-                        <Label for="address">
-                            Rue et numéro
-                        </Label>
+                        <Label for="address"> Rue et numéro </Label>
 
                         <Input
                             id="address"
@@ -288,9 +273,7 @@ const submit = () => {
 
                     <div class="grid sm:grid-cols-[1fr_160px] gap-4">
                         <div class="space-y-2">
-                            <Label for="locality">
-                                Localité
-                            </Label>
+                            <Label for="locality"> Localité </Label>
 
                             <Input
                                 id="locality"
@@ -311,9 +294,7 @@ const submit = () => {
                         </div>
 
                         <div class="space-y-2">
-                            <Label for="postal_code">
-                                Code postal
-                            </Label>
+                            <Label for="postal_code"> Code postal </Label>
 
                             <Input
                                 id="postal_code"
@@ -338,46 +319,40 @@ const submit = () => {
                 <!-- ========================================= -->
                 <!-- PASSWORD                                  -->
                 <!-- ========================================= -->
-                <section
-                    class="p-6 sm:p-8 space-y-5 border-t border-gray-100"
-                >
+                <section class="p-6 sm:p-8 space-y-5 border-t border-gray-100">
                     <div>
                         <h2 class="text-lg font-bold text-gray-900">
                             Sécurité
                         </h2>
 
                         <p class="mt-1 text-xs text-gray-500">
-                            Minimum 10 caractères, avec une majuscule,
-                            une minuscule et un chiffre.
+                            Minimum 10 caractères, avec une majuscule, une
+                            minuscule et un chiffre.
                         </p>
                     </div>
 
                     <div class="grid sm:grid-cols-2 gap-4">
                         <!-- Password -->
                         <div class="space-y-2">
-                            <Label for="password">
-                                Mot de passe
-                            </Label>
+                            <Label for="password"> Mot de passe </Label>
 
                             <div class="relative">
                                 <Input
                                     id="password"
                                     v-model="form.password"
-                                    :type="
-                                        showPassword
-                                            ? 'text'
-                                            : 'password'
-                                    "
+                                    :type="showPassword ? 'text' : 'password'"
                                     autocomplete="new-password"
                                     required
-                                    :aria-invalid="
-                                        form.invalid('password')
-                                    "
+                                    :aria-invalid="form.invalid('password')"
                                     :class="[
                                         ...fieldClass('password'),
                                         'pr-10',
                                     ]"
-                                    @change="validate('password')"
+                                    @change="
+                                        form.password_confirmation
+                                            ? validate('password')
+                                            : null
+                                    "
                                 />
 
                                 <button
@@ -389,10 +364,7 @@ const submit = () => {
                                         v-if="showPassword"
                                         class="w-4 h-4"
                                     />
-                                    <Eye
-                                        v-else
-                                        class="w-4 h-4"
-                                    />
+                                    <Eye v-else class="w-4 h-4" />
                                 </button>
                             </div>
 
@@ -415,56 +387,40 @@ const submit = () => {
                                     id="password_confirmation"
                                     v-model="form.password_confirmation"
                                     :type="
-                                        showConfirmation
-                                            ? 'text'
-                                            : 'password'
+                                        showConfirmation ? 'text' : 'password'
                                     "
                                     autocomplete="new-password"
                                     required
                                     :aria-invalid="
-                                        form.invalid(
-                                            'password_confirmation'
-                                        )
+                                        form.invalid('password_confirmation')
                                     "
                                     :class="[
-                                        ...fieldClass(
-                                            'password_confirmation'
-                                        ),
+                                        ...fieldClass('password_confirmation'),
                                         'pr-10',
                                     ]"
-                                   @change="validate('password')"
+                                    @change="validate('password')"
                                 />
 
                                 <button
                                     type="button"
                                     class="absolute inset-y-0 right-0 px-3 text-gray-400 hover:text-gray-700"
                                     @click="
-                                        showConfirmation =
-                                            !showConfirmation
+                                        showConfirmation = !showConfirmation
                                     "
                                 >
                                     <EyeOff
                                         v-if="showConfirmation"
                                         class="w-4 h-4"
                                     />
-                                    <Eye
-                                        v-else
-                                        class="w-4 h-4"
-                                    />
+                                    <Eye v-else class="w-4 h-4" />
                                 </button>
                             </div>
 
                             <p
-                                v-if="
-                                    form.invalid(
-                                        'password_confirmation'
-                                    )
-                                "
+                                v-if="form.invalid('password_confirmation')"
                                 class="text-xs font-medium text-red-600"
                             >
-                                {{
-                                    form.errors.password_confirmation
-                                }}
+                                {{ form.errors.password_confirmation }}
                             </p>
                         </div>
                     </div>
@@ -473,12 +429,8 @@ const submit = () => {
                 <!-- ========================================= -->
                 <!-- FACTURATION                               -->
                 <!-- ========================================= -->
-                <section
-                    class="p-6 sm:p-8 space-y-5 border-t border-gray-100"
-                >
-                    <label
-                        class="flex items-start gap-3 cursor-pointer"
-                    >
+                <section class="p-6 sm:p-8 space-y-5 border-t border-gray-100">
+                    <label class="flex items-start gap-3 cursor-pointer">
                         <Checkbox
                             v-model:checked="form.billing"
                             name="billing"
@@ -504,9 +456,7 @@ const submit = () => {
                         class="grid sm:grid-cols-2 gap-4 p-4 sm:p-5 rounded-xl border border-gray-200 bg-gray-50"
                     >
                         <div class="space-y-2">
-                            <Label for="company_name">
-                                Société
-                            </Label>
+                            <Label for="company_name"> Société </Label>
 
                             <Input
                                 id="company_name"
@@ -524,9 +474,7 @@ const submit = () => {
                         </div>
 
                         <div class="space-y-2">
-                            <Label for="vat_number">
-                                Numéro de TVA
-                            </Label>
+                            <Label for="vat_number"> Numéro de TVA </Label>
 
                             <Input
                                 id="vat_number"
@@ -545,25 +493,17 @@ const submit = () => {
                         </div>
 
                         <div class="sm:col-span-2 space-y-2">
-                            <Label for="company_address">
-                                Adresse
-                            </Label>
+                            <Label for="company_address"> Adresse </Label>
 
                             <Input
                                 id="company_address"
                                 v-model="form.company_address"
-                                :class="
-                                    fieldClass('company_address')
-                                "
-                                @change="
-                                    validate('company_address')
-                                "
+                                :class="fieldClass('company_address')"
+                                @change="validate('company_address')"
                             />
 
                             <p
-                                v-if="
-                                    form.invalid('company_address')
-                                "
+                                v-if="form.invalid('company_address')"
                                 class="text-xs text-red-600"
                             >
                                 {{ form.errors.company_address }}
@@ -571,25 +511,17 @@ const submit = () => {
                         </div>
 
                         <div class="space-y-2">
-                            <Label for="company_locality">
-                                Localité
-                            </Label>
+                            <Label for="company_locality"> Localité </Label>
 
                             <Input
                                 id="company_locality"
                                 v-model="form.company_locality"
-                                :class="
-                                    fieldClass('company_locality')
-                                "
-                                @change="
-                                    validate('company_locality')
-                                "
+                                :class="fieldClass('company_locality')"
+                                @change="validate('company_locality')"
                             />
 
                             <p
-                                v-if="
-                                    form.invalid('company_locality')
-                                "
+                                v-if="form.invalid('company_locality')"
                                 class="text-xs text-red-600"
                             >
                                 {{ form.errors.company_locality }}
@@ -604,30 +536,15 @@ const submit = () => {
                             <Input
                                 id="company_postal_code"
                                 v-model="form.company_postal_code"
-                                :class="
-                                    fieldClass(
-                                        'company_postal_code'
-                                    )
-                                "
-                                @change="
-                                    validate(
-                                        'company_postal_code'
-                                    )
-                                "
+                                :class="fieldClass('company_postal_code')"
+                                @change="validate('company_postal_code')"
                             />
 
                             <p
-                                v-if="
-                                    form.invalid(
-                                        'company_postal_code'
-                                    )
-                                "
+                                v-if="form.invalid('company_postal_code')"
                                 class="text-xs text-red-600"
                             >
-                                {{
-                                    form.errors
-                                        .company_postal_code
-                                }}
+                                {{ form.errors.company_postal_code }}
                             </p>
                         </div>
                     </div>
@@ -645,18 +562,14 @@ const submit = () => {
                                 .hasTermsAndPrivacyPolicyFeature
                         "
                     >
-                        <label
-                            class="flex items-start gap-3 cursor-pointer"
-                        >
+                        <label class="flex items-start gap-3 cursor-pointer">
                             <Checkbox
                                 v-model:checked="form.terms"
                                 name="terms"
                                 @change="validate('terms')"
                             />
 
-                            <span
-                                class="text-sm leading-relaxed text-gray-600"
-                            >
+                            <span class="text-sm leading-relaxed text-gray-600">
                                 J'accepte les
                                 <a
                                     target="_blank"
@@ -671,8 +584,8 @@ const submit = () => {
                                     :href="route('policy.show')"
                                     class="font-medium text-gray-900 underline underline-offset-2"
                                 >
-                                    politique de confidentialité
-                                </a>.
+                                    politique de confidentialité </a
+                                >.
                             </span>
                         </label>
 
@@ -687,23 +600,14 @@ const submit = () => {
                     <Button
                         type="submit"
                         class="w-full h-11 bg-blue-600 hover:bg-blue-500 text-white font-semibold"
-                        :disabled="
-                            form.processing ||
-                            form.validating
-                        "
+                        :disabled="form.processing || form.validating"
                     >
                         <Loader2
-                            v-if="
-                                form.processing ||
-                                form.validating
-                            "
+                            v-if="form.processing || form.validating"
                             class="w-4 h-4 mr-2 animate-spin"
                         />
 
-                        <UserPlus
-                            v-else
-                            class="w-4 h-4 mr-2"
-                        />
+                        <UserPlus v-else class="w-4 h-4 mr-2" />
 
                         {{
                             form.processing

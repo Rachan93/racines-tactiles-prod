@@ -8,12 +8,7 @@ import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
 
-import {
-    ArrowLeft,
-    CheckCircle2,
-    Loader2,
-    Mail,
-} from "lucide-vue-next";
+import { ArrowLeft, CheckCircle2, Loader2, Mail } from "lucide-vue-next";
 
 defineProps({
     status: String,
@@ -41,19 +36,15 @@ const submit = () => {
         <div class="w-full max-w-md mx-auto">
             <!-- Intro -->
             <div class="mb-8 text-center">
-                <div
-                    class="w-12 h-12 mx-auto mb-4 rounded-xl bg-gray-100 flex items-center justify-center"
+                <h1
+                    class="text-4xl sm:text-[2.65rem] font-bold text-gray-900 whitespace-nowrap"
                 >
-                    <Mail class="w-5 h-5 text-gray-700" />
-                </div>
-
-                <h1 class="text-4xl sm:text-5xl font-bold text-gray-900">
                     Mot de passe oublié ?
                 </h1>
 
                 <p class="mt-3 text-sm text-gray-500 leading-relaxed">
-                    Indiquez l'adresse e-mail liée à votre compte.
-                    Nous vous enverrons un lien pour choisir un nouveau mot de passe.
+                    Indiquez l'adresse e-mail liée à votre compte. Nous vous
+                    enverrons un lien pour choisir un nouveau mot de passe.
                 </p>
             </div>
 
@@ -74,10 +65,7 @@ const submit = () => {
                     </p>
                 </div>
 
-                <form
-                    class="space-y-5"
-                    @submit.prevent="submit"
-                >
+                <form class="space-y-5" @submit.prevent="submit">
                     <div class="space-y-2">
                         <Label
                             for="email"
@@ -121,10 +109,7 @@ const submit = () => {
                             class="w-4 h-4 mr-2 animate-spin"
                         />
 
-                        <Mail
-                            v-else
-                            class="w-4 h-4 mr-2"
-                        />
+                        <Mail v-else class="w-4 h-4 mr-2" />
 
                         {{
                             form.processing
