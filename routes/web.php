@@ -220,6 +220,8 @@ Route::middleware([
     Route::get('/membres', [AdminUserController::class, 'index'])->name('users.index');
     Route::get('/membres/export/csv', [AdminUserController::class, 'exportCsv'])->name('users.export-csv');
     Route::get('/membres/search-recipients', [AdminUserController::class, 'searchRecipients'])->name('users.search-recipients');
+    Route::post('/membres/email/preview', [AdminUserController::class, 'previewEmail'])
+        ->name('users.preview-email');
     Route::post('/membres/email/test', [AdminUserController::class, 'sendTestEmail'])->name('users.send-test-email');
     Route::post('/membres/check-recipients', [AdminUserController::class, 'checkRecipients'])->name('users.check-recipients');
     Route::post('/membres/email/bulk', [AdminUserController::class, 'sendBulkEmail'])->name('users.send-bulk-email');

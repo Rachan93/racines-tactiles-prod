@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UserIndexRequest;
-use App\Jobs\SendBulkEmailJob;
+use App\Jobs\SendBroadcastEmailJob;
 use App\Mail\AdminBroadcastMail;
 use App\Models\Attendee;
 use App\Models\Course;
@@ -69,7 +69,7 @@ class UserController extends Controller
                 'created_at_formatted' => $user->created_at ? $user->created_at->translatedFormat('d M Y') : '-',
                 'modules_count' => $user->modules_count ?? 0,
                 'attendees_count' => $user->attendees_count ?? 0,
-                'attendees' => $user->attendees->map(fn ($a) => [
+                'attendees' => $user->attendees->map(fn($a) => [
                     'id' => $a->id,
                     'first_name' => $a->first_name,
                     'last_name' => $a->last_name,
@@ -138,12 +138,12 @@ class UserController extends Controller
         $users = User::query()
             ->where(function ($q) use ($query) {
                 $q->where('first_name', 'like', "%{$query}%")
-                  ->orWhere('last_name', 'like', "%{$query}%")
-                  ->orWhere('email', 'like', "%{$query}%");
+                    ->orWhere('last_name', 'like', "%{$query}%")
+                    ->orWhere('email', 'like', "%{$query}%");
             })
             ->limit(10)
             ->get(['id', 'first_name', 'last_name', 'email', 'phone_number'])
-            ->map(fn ($u) => [
+            ->map(fn($u) => [
                 'id' => $u->id,
                 'first_name' => $u->first_name,
                 'last_name' => $u->last_name,
@@ -169,7 +169,7 @@ class UserController extends Controller
         $users = User::query()
             ->whereIn('email', $emails)
             ->get(['id', 'first_name', 'last_name', 'email', 'phone_number'])
-            ->map(fn ($u) => [
+            ->map(fn($u) => [
                 'id' => $u->id,
                 'first_name' => $u->first_name,
                 'last_name' => $u->last_name,
@@ -179,6 +179,35 @@ class UserController extends Controller
             ]);
 
         return response()->json($users);
+    }
+
+    public function previewEmail(Request $request)
+    {
+        $validated = $request->validate([
+            'subject' => ['required', 'string', 'max:255'],
+            'body' => ['required', 'string', 'max:10000'],
+            'first_name' => ['nullable', 'string', 'max:255'],
+            'last_name' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email'],
+
+        ]);
+
+        $recipient = (object) [
+            'first_name' => $validated['first_name'] ?? 'Sophie',
+            'last_name' => $validated['last_name'] ?? 'Martin',
+            'email' => $validated['email'] ?? 'sophie.martin@example.com',
+        ];
+
+        $mail = new AdminBroadcastMail(
+            recipient: $recipient,
+            subjectText: $validated['subject'],
+            bodyText: $validated['body'],
+            isTest: false,
+            isPreview: true
+        );
+
+        return response($mail->render(), 200)
+            ->header('Content-Type', 'text/html; charset=UTF-8');
     }
 
     /**
@@ -214,40 +243,149 @@ class UserController extends Controller
     /**
      * Envoi d'e-mails groupés mis en file d'attente (Queue / Job).
      */
-    public function sendBulkEmail(Request $request, PeopleQueryBuilder $queryBuilder): JsonResponse
-    {
+    /**
+     * Mise en file d'attente des e-mails groupés.
+     * Chaque destinataire reçoit son propre job.
+     */
+    public function sendBulkEmail(
+        Request $request,
+        PeopleQueryBuilder $queryBuilder
+    ): JsonResponse {
         $validated = $request->validate([
             'subject' => ['required', 'string', 'max:255'],
             'body' => ['required', 'string', 'max:10000'],
+
             'recipient_ids' => ['nullable', 'array'],
             'recipient_ids.*' => ['integer', 'exists:users,id'],
+
             'custom_emails' => ['nullable', 'array'],
             'custom_emails.*' => ['email'],
+
             'select_all_matching' => ['nullable', 'boolean'],
             'filters' => ['nullable', 'array'],
         ]);
 
-        $selectAll = filter_var($validated['select_all_matching'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $selectAll = filter_var(
+            $validated['select_all_matching'] ?? false,
+            FILTER_VALIDATE_BOOLEAN
+        );
+
         $recipientIds = $validated['recipient_ids'] ?? [];
         $customEmails = $validated['custom_emails'] ?? [];
 
+        /*
+    |--------------------------------------------------------------------------
+    | Membres sélectionnés
+    |--------------------------------------------------------------------------
+    */
+
         if ($selectAll) {
             $filters = $validated['filters'] ?? [];
-            $recipientIds = $queryBuilder->getUsersQuery($filters)->pluck('users.id')->toArray();
+
+            $users = $queryBuilder
+                ->getUsersQuery($filters)
+                ->get([
+                    'users.id',
+                    'users.first_name',
+                    'users.last_name',
+                    'users.email',
+                ]);
+        } else {
+            $users = User::query()
+                ->whereIn('id', $recipientIds)
+                ->get([
+                    'id',
+                    'first_name',
+                    'last_name',
+                    'email',
+                ]);
         }
 
-        $totalRecipients = count($recipientIds) + count($customEmails);
+        /*
+    |--------------------------------------------------------------------------
+    | Création de la liste finale
+    |--------------------------------------------------------------------------
+    */
 
-        if ($totalRecipients === 0) {
-            return response()->json(['error' => 'Aucun destinataire sélectionné.'], 422);
+        $recipients = collect();
+
+        foreach ($users as $user) {
+            if (
+                empty($user->email) ||
+                ! filter_var($user->email, FILTER_VALIDATE_EMAIL)
+            ) {
+                continue;
+            }
+
+            $recipients->push([
+                'email' => strtolower(trim($user->email)),
+                'first_name' => $user->first_name ?? 'Membre',
+                'last_name' => $user->last_name ?? '',
+            ]);
         }
 
-        // Dispatch dans la file d'attente
-        SendBulkEmailJob::dispatch($recipientIds, $customEmails, $validated['subject'], $validated['body']);
+        foreach ($customEmails as $email) {
+            $cleanEmail = strtolower(trim((string) $email));
+
+            if (
+                empty($cleanEmail) ||
+                ! filter_var($cleanEmail, FILTER_VALIDATE_EMAIL)
+            ) {
+                continue;
+            }
+
+            $recipients->push([
+                'email' => $cleanEmail,
+                'first_name' => explode('@', $cleanEmail)[0],
+                'last_name' => '',
+            ]);
+        }
+
+        /*
+    |--------------------------------------------------------------------------
+    | Suppression des doublons
+    |--------------------------------------------------------------------------
+    */
+
+        $recipients = $recipients
+            ->unique('email')
+            ->values();
+
+        if ($recipients->isEmpty()) {
+            return response()->json([
+                'error' => 'Aucun destinataire valide sélectionné.',
+            ], 422);
+        }
+
+        /*
+    |--------------------------------------------------------------------------
+    | Dispatch
+    |--------------------------------------------------------------------------
+    |
+    | Décalage de 2 secondes entre chaque job pour éviter de bombarder
+    | le serveur SMTP.
+    |
+    */
+
+        foreach ($recipients as $index => $recipient) {
+            SendBroadcastEmailJob::dispatch(
+                email: $recipient['email'],
+                firstName: $recipient['first_name'],
+                lastName: $recipient['last_name'],
+                subject: $validated['subject'],
+                body: $validated['body'],
+            )->delay(
+                now()->addSeconds(
+                    $index * config('racines.broadcast_email_delay')
+                )
+            );
+        }
+
+        $count = $recipients->count();
 
         return response()->json([
-            'message' => "{$totalRecipients} e-mail(s) ont été mis en file d'envoi avec succès.",
-            'count' => $totalRecipients,
+            'message' => "{$count} e-mail(s) ont été mis en file d'envoi.",
+            'count' => $count,
         ]);
     }
 
@@ -268,8 +406,21 @@ class UserController extends Controller
 
             if ($type === 'users') {
                 fputcsv($handle, [
-                    'ID', 'Nom', 'Prénom', 'Email', 'Téléphone', 'Adresse', 'Code postal', 'Localité',
-                    'Date Naissance', 'Société', 'Adresse Société', 'TVA', 'Modules', 'Invités', 'Date Inscription'
+                    'ID',
+                    'Nom',
+                    'Prénom',
+                    'Email',
+                    'Téléphone',
+                    'Adresse',
+                    'Code postal',
+                    'Localité',
+                    'Date Naissance',
+                    'Société',
+                    'Adresse Société',
+                    'TVA',
+                    'Modules',
+                    'Invités',
+                    'Date Inscription'
                 ], ';');
 
                 $query = $selectAll
@@ -347,58 +498,58 @@ class UserController extends Controller
     /**
      * Fiche détaillée d'un membre.
      */
-   /**
- * Fiche détaillée d'un membre.
- *
- * Affiche :
- * - les informations du titulaire ;
- * - ses invités ;
- * - ses propres modules ;
- * - les modules de ses invités ;
- * - les séances et absences de chaque module.
- */
-public function show(User $user): Response
-{
-    $today = now()->startOfDay();
+    /**
+     * Fiche détaillée d'un membre.
+     *
+     * Affiche :
+     * - les informations du titulaire ;
+     * - ses invités ;
+     * - ses propres modules ;
+     * - les modules de ses invités ;
+     * - les séances et absences de chaque module.
+     */
+    public function show(User $user): Response
+    {
+        $today = now()->startOfDay();
 
-    /*
+        /*
     |--------------------------------------------------------------------------
     | Relations nécessaires à chaque module
     |--------------------------------------------------------------------------
     */
 
-    $moduleRelations = [
-        'type:id,name',
+        $moduleRelations = [
+            'type:id,name',
 
-        'enrollments' => fn ($query) => $query->with([
-            'lesson.course.type',
-            'absences',
-            'replacesAbsence.enrollment.lesson.course',
-        ]),
-    ];
+            'enrollments' => fn($query) => $query->with([
+                'lesson.course.type',
+                'absences',
+                'replacesAbsence.enrollment.lesson.course',
+            ]),
+        ];
 
-    /*
+        /*
     |--------------------------------------------------------------------------
     | Chargement du compte complet
     |--------------------------------------------------------------------------
     */
 
-    $user->load([
-        'modules' => fn ($query) => $query
-            ->with($moduleRelations)
-            ->orderByDesc('purchase_date'),
+        $user->load([
+            'modules' => fn($query) => $query
+                ->with($moduleRelations)
+                ->orderByDesc('purchase_date'),
 
-        'attendees' => fn ($query) => $query
-            ->orderBy('first_name')
-            ->orderBy('last_name')
-            ->with([
-                'modules' => fn ($moduleQuery) => $moduleQuery
-                    ->with($moduleRelations)
-                    ->orderByDesc('purchase_date'),
-            ]),
-    ]);
+            'attendees' => fn($query) => $query
+                ->orderBy('first_name')
+                ->orderBy('last_name')
+                ->with([
+                    'modules' => fn($moduleQuery) => $moduleQuery
+                        ->with($moduleRelations)
+                        ->orderByDesc('purchase_date'),
+                ]),
+        ]);
 
-    /*
+        /*
     |--------------------------------------------------------------------------
     | Regroupement de tous les modules du compte
     |--------------------------------------------------------------------------
@@ -407,243 +558,243 @@ public function show(User $user): Response
     |
     */
 
-    $moduleEntries = collect();
+        $moduleEntries = collect();
 
-    foreach ($user->modules as $module) {
-        $moduleEntries->push([
-            'module' => $module,
-            'participant' => [
-                'id' => $user->id,
-                'type' => 'user',
-                'name' => trim("{$user->first_name} {$user->last_name}"),
-                'label' => 'Titulaire',
-            ],
-        ]);
-    }
-
-    foreach ($user->attendees as $attendee) {
-        foreach ($attendee->modules as $module) {
+        foreach ($user->modules as $module) {
             $moduleEntries->push([
                 'module' => $module,
                 'participant' => [
-                    'id' => $attendee->id,
-                    'type' => 'attendee',
-                    'name' => trim("{$attendee->first_name} {$attendee->last_name}"),
-                    'label' => 'Invité',
+                    'id' => $user->id,
+                    'type' => 'user',
+                    'name' => trim("{$user->first_name} {$user->last_name}"),
+                    'label' => 'Titulaire',
                 ],
             ]);
         }
-    }
 
-    /*
+        foreach ($user->attendees as $attendee) {
+            foreach ($attendee->modules as $module) {
+                $moduleEntries->push([
+                    'module' => $module,
+                    'participant' => [
+                        'id' => $attendee->id,
+                        'type' => 'attendee',
+                        'name' => trim("{$attendee->first_name} {$attendee->last_name}"),
+                        'label' => 'Invité',
+                    ],
+                ]);
+            }
+        }
+
+        /*
     |--------------------------------------------------------------------------
     | Formatage des modules
     |--------------------------------------------------------------------------
     */
 
-    $modules = $moduleEntries
-        ->sortByDesc(
-            fn ($entry) =>
-            $entry['module']->purchase_date?->timestamp ?? 0
-        )
-        ->values()
-        ->map(function ($entry) use ($today) {
-            /** @var \App\Models\Module $module */
-            $module = $entry['module'];
+        $modules = $moduleEntries
+            ->sortByDesc(
+                fn($entry) =>
+                $entry['module']->purchase_date?->timestamp ?? 0
+            )
+            ->values()
+            ->map(function ($entry) use ($today) {
+                /** @var \App\Models\Module $module */
+                $module = $entry['module'];
 
-            /*
+                /*
              * Tri chronologique des inscriptions.
              */
-            $sortedEnrollments = $module->enrollments
-                ->sortBy(function ($enrollment) {
-                    $lesson = $enrollment->lesson;
+                $sortedEnrollments = $module->enrollments
+                    ->sortBy(function ($enrollment) {
+                        $lesson = $enrollment->lesson;
 
-                    if (! $lesson || ! $lesson->date) {
-                        return '9999-12-31 23:59:59';
-                    }
+                        if (! $lesson || ! $lesson->date) {
+                            return '9999-12-31 23:59:59';
+                        }
 
-                    $date = Carbon::parse($lesson->date)
-                        ->format('Y-m-d');
+                        $date = Carbon::parse($lesson->date)
+                            ->format('Y-m-d');
 
-                    $time = (string) (
-                        $lesson->effective_start_time ?? '23:59:59'
-                    );
+                        $time = (string) (
+                            $lesson->effective_start_time ?? '23:59:59'
+                        );
 
-                    return "{$date} {$time}";
-                })
-                ->values();
+                        return "{$date} {$time}";
+                    })
+                    ->values();
 
-            /*
+                /*
              * Séances régulières uniquement pour la progression.
              */
-            $regularEnrollments = $sortedEnrollments
-                ->where('enrollment_type', 'regular');
+                $regularEnrollments = $sortedEnrollments
+                    ->where('enrollment_type', 'regular');
 
-            $completedLessons = $regularEnrollments
-                ->filter(function ($enrollment) use ($today) {
-                    if (! $enrollment->lesson?->date) {
-                        return false;
-                    }
+                $completedLessons = $regularEnrollments
+                    ->filter(function ($enrollment) use ($today) {
+                        if (! $enrollment->lesson?->date) {
+                            return false;
+                        }
 
-                    return Carbon::parse($enrollment->lesson->date)
-                        ->startOfDay()
-                        ->lt($today);
-                })
-                ->count();
+                        return Carbon::parse($enrollment->lesson->date)
+                            ->startOfDay()
+                            ->lt($today);
+                    })
+                    ->count();
 
-            /*
+                /*
              * Rattrapages utilisés.
              */
-            $makeupsUsed = $sortedEnrollments
-                ->where('enrollment_type', 'makeup')
-                ->whereIn('status', ['registered', 'absent'])
-                ->count();
+                $makeupsUsed = $sortedEnrollments
+                    ->where('enrollment_type', 'makeup')
+                    ->whereIn('status', ['registered', 'absent'])
+                    ->count();
 
-            $maxMakeups = $module->max_makeups_allowed;
+                $maxMakeups = $module->max_makeups_allowed;
 
-            $remainingMakeups = max(
-                0,
-                $maxMakeups - $makeupsUsed
-            );
+                $remainingMakeups = max(
+                    0,
+                    $maxMakeups - $makeupsUsed
+                );
 
-            /*
+                /*
              * Séances à venir encore actives.
              */
-            $upcomingLessons = $sortedEnrollments
-                ->filter(function ($enrollment) use ($today) {
-                    if (
-                        ! $enrollment->lesson?->date ||
-                        $enrollment->status !== 'registered'
-                    ) {
-                        return false;
-                    }
+                $upcomingLessons = $sortedEnrollments
+                    ->filter(function ($enrollment) use ($today) {
+                        if (
+                            ! $enrollment->lesson?->date ||
+                            $enrollment->status !== 'registered'
+                        ) {
+                            return false;
+                        }
 
-                    return Carbon::parse($enrollment->lesson->date)
-                        ->startOfDay()
-                        ->gte($today);
-                })
-                ->count();
+                        return Carbon::parse($enrollment->lesson->date)
+                            ->startOfDay()
+                            ->gte($today);
+                    })
+                    ->count();
 
-            /*
+                /*
              * Numérotation :
              * les rattrapages ne prennent PAS un numéro de
              * séance régulière.
              */
-            $regularSequence = 0;
+                $regularSequence = 0;
 
-            $formattedEnrollments = $sortedEnrollments
-                ->map(function ($enrollment) use (
-                    &$regularSequence,
-                    $today
-                ) {
-                    $lesson = $enrollment->lesson;
+                $formattedEnrollments = $sortedEnrollments
+                    ->map(function ($enrollment) use (
+                        &$regularSequence,
+                        $today
+                    ) {
+                        $lesson = $enrollment->lesson;
 
-                    if ($enrollment->enrollment_type === 'regular') {
-                        $regularSequence++;
-                    }
+                        if ($enrollment->enrollment_type === 'regular') {
+                            $regularSequence++;
+                        }
 
-                    $lessonDate = $lesson?->date
-                        ? Carbon::parse($lesson->date)
-                        : null;
+                        $lessonDate = $lesson?->date
+                            ? Carbon::parse($lesson->date)
+                            : null;
 
-                    $activeAbsence = $enrollment->absences
-                        ->first(
-                            fn ($absence) =>
-                            $absence->active &&
-                            $absence->cancellation_date === null
-                        );
+                        $activeAbsence = $enrollment->absences
+                            ->first(
+                                fn($absence) =>
+                                $absence->active &&
+                                    $absence->cancellation_date === null
+                            );
 
-                    $replacedAbsence =
-                        $enrollment->replacesAbsence;
+                        $replacedAbsence =
+                            $enrollment->replacesAbsence;
 
-                    return [
-                        'id' => $enrollment->id,
+                        return [
+                            'id' => $enrollment->id,
 
-                        'sequence_number' =>
+                            'sequence_number' =>
                             $enrollment->enrollment_type === 'regular'
                                 ? $regularSequence
                                 : null,
 
-                        'status' => $enrollment->status,
+                            'status' => $enrollment->status,
 
-                        'enrollment_type' =>
+                            'enrollment_type' =>
                             $enrollment->enrollment_type,
 
-                        'spot_type' => $enrollment->spot_type,
+                            'spot_type' => $enrollment->spot_type,
 
-                        'is_past' => $lessonDate
-                            ? $lessonDate
+                            'is_past' => $lessonDate
+                                ? $lessonDate
                                 ->copy()
                                 ->startOfDay()
                                 ->lt($today)
-                            : false,
+                                : false,
 
-                        'lesson' => [
-                            'id' => $lesson?->id,
+                            'lesson' => [
+                                'id' => $lesson?->id,
 
-                            'date' => $lessonDate
-                                ? $lessonDate->format('Y-m-d')
-                                : null,
+                                'date' => $lessonDate
+                                    ? $lessonDate->format('Y-m-d')
+                                    : null,
 
-                            'date_formatted' => $lessonDate
-                                ? ucfirst(
-                                    $lessonDate
-                                        ->locale('fr')
-                                        ->translatedFormat('D d M Y')
-                                )
-                                : '-',
+                                'date_formatted' => $lessonDate
+                                    ? ucfirst(
+                                        $lessonDate
+                                            ->locale('fr')
+                                            ->translatedFormat('D d M Y')
+                                    )
+                                    : '-',
 
-                            'start_time' => $lesson
-                                ? substr(
-                                    (string) $lesson->effective_start_time,
-                                    0,
-                                    5
-                                )
-                                : '-',
+                                'start_time' => $lesson
+                                    ? substr(
+                                        (string) $lesson->effective_start_time,
+                                        0,
+                                        5
+                                    )
+                                    : '-',
 
-                            'end_time' => $lesson
-                                ? substr(
-                                    (string) $lesson->effective_end_time,
-                                    0,
-                                    5
-                                )
-                                : '-',
+                                'end_time' => $lesson
+                                    ? substr(
+                                        (string) $lesson->effective_end_time,
+                                        0,
+                                        5
+                                    )
+                                    : '-',
 
-                            'course_name' =>
+                                'course_name' =>
                                 $lesson?->course?->name ?? 'Cours supprimé',
 
-                            'type_name' =>
+                                'type_name' =>
                                 $lesson?->course?->type?->name ?? 'Général',
 
-                            'is_cancelled' =>
+                                'is_cancelled' =>
                                 (bool) ($lesson?->is_cancelled ?? false),
-                        ],
+                            ],
 
-                        'absence' => $activeAbsence
-                            ? [
-                                'id' => $activeAbsence->id,
-                                'active' => true,
-                                'notification_date' =>
+                            'absence' => $activeAbsence
+                                ? [
+                                    'id' => $activeAbsence->id,
+                                    'active' => true,
+                                    'notification_date' =>
                                     $activeAbsence->notification_date
                                         ? Carbon::parse(
                                             $activeAbsence->notification_date
                                         )->translatedFormat('d M Y H:i')
                                         : null,
-                            ]
-                            : null,
+                                ]
+                                : null,
 
-                        'replaces' => $replacedAbsence
-                            ? [
-                                'id' => $replacedAbsence->id,
+                            'replaces' => $replacedAbsence
+                                ? [
+                                    'id' => $replacedAbsence->id,
 
-                                'course_name' =>
+                                    'course_name' =>
                                     $replacedAbsence
                                         ->enrollment
                                         ?->lesson
                                         ?->course
                                         ?->name,
 
-                                'date' =>
+                                    'date' =>
                                     $replacedAbsence
                                         ->enrollment
                                         ?->lesson
@@ -655,182 +806,182 @@ public function show(User $user): Response
                                                 ->date
                                         )->translatedFormat('d M Y')
                                         : null,
-                            ]
-                            : null,
-                    ];
-                });
+                                ]
+                                : null,
+                        ];
+                    });
 
-            return [
-                'id' => $module->id,
+                return [
+                    'id' => $module->id,
 
-                'participant' => $entry['participant'],
+                    'participant' => $entry['participant'],
 
-                'type' => [
-                    'id' => $module->type?->id,
-                    'name' => $module->type?->name ?? 'Général',
-                ],
+                    'type' => [
+                        'id' => $module->type?->id,
+                        'name' => $module->type?->name ?? 'Général',
+                    ],
 
-                'is_active' => (bool) $module->is_active,
+                    'is_active' => (bool) $module->is_active,
 
-                'total_lessons' => (int) $module->total_lessons,
+                    'total_lessons' => (int) $module->total_lessons,
 
-                'completed_lessons' => $completedLessons,
+                    'completed_lessons' => $completedLessons,
 
-                'upcoming_lessons' => $upcomingLessons,
+                    'upcoming_lessons' => $upcomingLessons,
 
-                'paid_price' => (float) $module->paid_price,
+                    'paid_price' => (float) $module->paid_price,
 
-                'purchase_date' => $module->purchase_date
-                    ? $module->purchase_date
+                    'purchase_date' => $module->purchase_date
+                        ? $module->purchase_date
                         ->locale('fr')
                         ->translatedFormat('d M Y')
-                    : '-',
+                        : '-',
 
-                'expiration_date' => $module->expiration_date
-                    ? $module->expiration_date
+                    'expiration_date' => $module->expiration_date
+                        ? $module->expiration_date
                         ->locale('fr')
                         ->translatedFormat('d M Y')
-                    : null,
+                        : null,
 
-                'max_makeups_allowed' => $maxMakeups,
+                    'max_makeups_allowed' => $maxMakeups,
 
-                'makeups_used_count' => $makeupsUsed,
+                    'makeups_used_count' => $makeupsUsed,
 
-                'remaining_makeups' => $remainingMakeups,
+                    'remaining_makeups' => $remainingMakeups,
 
-                'absences_count' => $sortedEnrollments
-                    ->where('status', 'absent')
-                    ->count(),
+                    'absences_count' => $sortedEnrollments
+                        ->where('status', 'absent')
+                        ->count(),
 
-                'enrollments' => $formattedEnrollments,
-            ];
-        });
+                    'enrollments' => $formattedEnrollments,
+                ];
+            });
 
-    /*
+        /*
     |--------------------------------------------------------------------------
     | Invités
     |--------------------------------------------------------------------------
     */
 
-    $attendees = $user->attendees
-        ->map(function (Attendee $attendee) {
-            return [
-                'id' => $attendee->id,
+        $attendees = $user->attendees
+            ->map(function (Attendee $attendee) {
+                return [
+                    'id' => $attendee->id,
 
-                'first_name' => $attendee->first_name,
-                'last_name' => $attendee->last_name,
+                    'first_name' => $attendee->first_name,
+                    'last_name' => $attendee->last_name,
 
-                'full_name' => trim(
-                    "{$attendee->first_name} {$attendee->last_name}"
-                ),
+                    'full_name' => trim(
+                        "{$attendee->first_name} {$attendee->last_name}"
+                    ),
 
-                'birthday' => $attendee->birthday
-                    ? Carbon::parse($attendee->birthday)
+                    'birthday' => $attendee->birthday
+                        ? Carbon::parse($attendee->birthday)
                         ->locale('fr')
                         ->translatedFormat('d F Y')
-                    : null,
+                        : null,
 
-                'created_at' => $attendee->created_at
-                    ? $attendee->created_at
+                    'created_at' => $attendee->created_at
+                        ? $attendee->created_at
                         ->locale('fr')
                         ->translatedFormat('d M Y')
-                    : null,
+                        : null,
 
-                'modules_count' => $attendee->modules->count(),
+                    'modules_count' => $attendee->modules->count(),
 
-                'active_modules_count' => $attendee->modules
-                    ->where('is_active', true)
-                    ->count(),
-            ];
-        })
-        ->values();
+                    'active_modules_count' => $attendee->modules
+                        ->where('is_active', true)
+                        ->count(),
+                ];
+            })
+            ->values();
 
-    /*
+        /*
     |--------------------------------------------------------------------------
     | Statistiques du compte
     |--------------------------------------------------------------------------
     */
 
-    $upcomingEnrollmentsCount = $modules->sum(
-        fn ($module) =>
-        collect($module['enrollments'])
-            ->where('is_past', false)
-            ->where('status', 'registered')
-            ->count()
-    );
+        $upcomingEnrollmentsCount = $modules->sum(
+            fn($module) =>
+            collect($module['enrollments'])
+                ->where('is_past', false)
+                ->where('status', 'registered')
+                ->count()
+        );
 
-    /*
+        /*
     |--------------------------------------------------------------------------
     | Réponse Inertia
     |--------------------------------------------------------------------------
     */
 
-    return Inertia::render('Admin/Users/Show', [
-        'user' => [
-            'id' => $user->id,
+        return Inertia::render('Admin/Users/Show', [
+            'user' => [
+                'id' => $user->id,
 
-            'first_name' => $user->first_name,
-            'last_name' => $user->last_name,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
 
-            'full_name' => trim(
-                "{$user->first_name} {$user->last_name}"
-            ),
+                'full_name' => trim(
+                    "{$user->first_name} {$user->last_name}"
+                ),
 
-            'email' => $user->email,
+                'email' => $user->email,
 
-            'email_verified' =>
+                'email_verified' =>
                 $user->email_verified_at !== null,
 
-            'phone_number' => $user->phone_number,
+                'phone_number' => $user->phone_number,
 
-            'birthday' => $user->birthday
-                ? Carbon::parse($user->birthday)
+                'birthday' => $user->birthday
+                    ? Carbon::parse($user->birthday)
                     ->locale('fr')
                     ->translatedFormat('d F Y')
-                : null,
+                    : null,
 
-            'address' => $user->address,
-            'postal_code' => $user->postal_code,
-            'locality' => $user->locality,
+                'address' => $user->address,
+                'postal_code' => $user->postal_code,
+                'locality' => $user->locality,
 
-            'billing' => (bool) $user->billing,
+                'billing' => (bool) $user->billing,
 
-            'company_name' => $user->company_name,
-            'company_address' => $user->company_address,
-            'company_postal_code' => $user->company_postal_code,
-            'company_locality' => $user->company_locality,
-            'vat_number' => $user->vat_number,
+                'company_name' => $user->company_name,
+                'company_address' => $user->company_address,
+                'company_postal_code' => $user->company_postal_code,
+                'company_locality' => $user->company_locality,
+                'vat_number' => $user->vat_number,
 
-            'created_at' => $user->created_at
-                ? $user->created_at
+                'created_at' => $user->created_at
+                    ? $user->created_at
                     ->locale('fr')
                     ->translatedFormat('d F Y')
-                : null,
+                    : null,
 
-            'updated_at' => $user->updated_at
-                ? $user->updated_at
+                'updated_at' => $user->updated_at
+                    ? $user->updated_at
                     ->locale('fr')
                     ->translatedFormat('d F Y à H:i')
-                : null,
-        ],
+                    : null,
+            ],
 
-        'stats' => [
-            'modules_count' => $modules->count(),
+            'stats' => [
+                'modules_count' => $modules->count(),
 
-            'active_modules_count' =>
+                'active_modules_count' =>
                 $modules
                     ->where('is_active', true)
                     ->count(),
 
-            'attendees_count' => $attendees->count(),
+                'attendees_count' => $attendees->count(),
 
-            'upcoming_enrollments_count' =>
+                'upcoming_enrollments_count' =>
                 $upcomingEnrollmentsCount,
-        ],
+            ],
 
-        'attendees' => $attendees,
+            'attendees' => $attendees,
 
-        'modules' => $modules,
-    ]);
-}
+            'modules' => $modules,
+        ]);
+    }
 }

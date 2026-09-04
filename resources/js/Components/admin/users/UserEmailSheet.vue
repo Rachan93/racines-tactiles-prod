@@ -77,33 +77,33 @@ const isSendingTest = ref(false);
 const templates = [
     {
         id: "custom",
-        name: "Message libre (Vide)",
+        name: "Message libre",
         subject: "",
         body: "",
     },
     {
         id: "pieces_ready",
         name: "🏺 Pièces prêtes pour l'émaillage",
-        subject: "Vos pièces en céramique sont prêtes pour l'émaillage !",
-        body: "Bonjour {prenom},\n\nNous avons le plaisir de vous informer que vos pièces issues de vos séances ont terminé leur première cuisson (biscuit).\n\nVous pouvez venir les émailler lors des créneaux en accès libre ou lors de votre prochaine séance.\n\nÀ très bientôt à l'atelier !\nL'équipe de l'Atelier de Céramique",
+        subject: "Vos pièces sont prêtes pour l'émaillage",
+        body: "Bonjour {prenom},\n\nBonne nouvelle : vos pièces ont terminé leur première cuisson et sont maintenant prêtes pour l'émaillage.\n\nVous pouvez venir les émailler lors d'un prochain passage à l'atelier ou pendant un créneau prévu à cet effet.\n\nÀ bientôt à l'atelier,\nThomas",
     },
     {
         id: "rentree",
-        name: "✨ Rentrée & Reprise des cours",
-        subject: "C'est la rentrée à l'atelier de céramique !",
-        body: "Bonjour {prenom},\n\nToute l'équipe espère que vous avez passé un bel été.\n\nLes cours et ateliers reprennent cette semaine. Pensez à apporter votre tablier et vos outils si vous en possédez.\n\nAu plaisir de vous retrouver au tour et au modelage !\nL'équipe de l'Atelier de Céramique",
+        name: "✨ Reprise des cours",
+        subject: "Reprise des cours chez Racines Tactiles",
+        body: "Bonjour {prenom},\n\nJ'espère que vous allez bien.\n\nLes cours reprennent bientôt chez Racines Tactiles. Pensez simplement à reprendre votre tablier et vos outils si vous en utilisez habituellement.\n\nJe me réjouis de vous retrouver à l'atelier.\n\nÀ très bientôt,\nThomas",
     },
     {
         id: "holiday_wishes",
-        name: "🎄 Vœux & Fermeture temporaire",
-        subject: "Joyeuses fêtes & Horaires de reprise de l'atelier",
-        body: "Bonjour {prenom},\n\nToute l'équipe vous souhaite d'excellentes fêtes de fin d'année et un repos bien mérité.\n\nL'atelier fermera ses portes temporairement pendant les congés et réouvrira dès la rentrée.\n\nChaleureusement,\nL'équipe de l'Atelier de Céramique",
+        name: "🎄 Congés & fêtes de fin d'année",
+        subject: "Belles fêtes de fin d'année",
+        body: "Bonjour {prenom},\n\nJe vous souhaite de très belles fêtes de fin d'année et un peu de repos avant la reprise.\n\nL'atelier sera fermé pendant les congés et rouvrira à la rentrée.\n\nMerci pour tous les bons moments partagés cette année à l'atelier.\n\nÀ bientôt,\nThomas",
     },
     {
         id: "practical_reminder",
-        name: "📋 Rappel & Informations pratiques",
-        subject: "Informations importantes concernant vos cours de céramique",
-        body: "Bonjour {prenom},\n\nNous vous rappelons quelques consignes pratiques pour le bon déroulement des ateliers :\n– Pensez à nettoyer vos tours et vos postes de modelage après chaque séance.\n– Vos pièces terminées sont conservées sur les étagères dédiées pendant un mois maximum après la cuisson finale.\n\nMerci pour votre précieuse collaboration !\nL'équipe de l'Atelier de Céramique",
+        name: "📋 Petit rappel pratique",
+        subject: "Quelques informations pratiques pour l'atelier",
+        body: "Bonjour {prenom},\n\nPetit rappel pour que les séances restent agréables pour tout le monde :\n\n– merci de nettoyer votre tour ou votre espace de modelage après la séance ;\n– les pièces terminées restent disponibles à l'atelier pendant environ un mois après leur cuisson finale.\n\nMerci d'y penser, et à bientôt à l'atelier.\n\nThomas",
     },
 ];
 
@@ -116,7 +116,7 @@ watch(
             activeTab.value = "write";
         }
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 watch(
@@ -125,7 +125,7 @@ watch(
         if (props.open) {
             localRecipients.value = [...newVal];
         }
-    }
+    },
 );
 
 // Application du modèle choisi
@@ -159,19 +159,55 @@ const sampleRecipient = computed(() => {
     };
 });
 
-// Remplacement réactif des variables pour l'aperçu
-const previewRenderedBody = computed(() => {
-    if (!body.value) return "Aucun contenu saisi pour le moment.";
+const previewHtml = ref("");
+const isLoadingPreview = ref(false);
+const previewError = ref("");
 
-    const r = sampleRecipient.value;
-    const firstName = r.first_name || r.full_name?.split(" ")[0] || "Membre";
-    const lastName = r.last_name || "";
-    const email = r.email || "";
+const loadPreview = async () => {
+    if (!subject.value || !body.value) {
+        previewHtml.value = "";
+        previewError.value =
+            "Renseignez un objet et un message pour afficher l’aperçu.";
+        return;
+    }
 
-    return body.value
-        .replaceAll("{prenom}", firstName)
-        .replaceAll("{nom}", lastName)
-        .replaceAll("{email}", email);
+    isLoadingPreview.value = true;
+    previewError.value = "";
+
+    try {
+        const r = sampleRecipient.value;
+
+        const response = await axios.post(
+            route("users.preview-email"),
+            {
+                subject: subject.value,
+                body: body.value,
+                first_name:
+                    r.first_name || r.full_name?.split(" ")[0] || "Sophie",
+                last_name: r.last_name || "Martin",
+                email: r.email || "sophie.martin@example.com",
+            },
+            {
+                responseType: "text",
+            },
+        );
+
+        previewHtml.value = response.data;
+    } catch (error) {
+        console.error(error);
+
+        previewHtml.value = "";
+        previewError.value =
+            error.response?.data?.message || "Impossible de générer l’aperçu.";
+    } finally {
+        isLoadingPreview.value = false;
+    }
+};
+
+watch(activeTab, (tab) => {
+    if (tab === "preview") {
+        loadPreview();
+    }
 });
 
 const close = () => {
@@ -182,7 +218,8 @@ const close = () => {
 const executeSendTestEmail = async () => {
     if (!subject.value || !body.value) {
         toast.error("Champs incomplets", {
-            description: "Veuillez renseigner un objet et un message avant d'envoyer un test.",
+            description:
+                "Veuillez renseigner un objet et un message avant d'envoyer un test.",
         });
         return;
     }
@@ -200,7 +237,9 @@ const executeSendTestEmail = async () => {
     } catch (error) {
         console.error(error);
         toast.error("Erreur d'envoi du test", {
-            description: error.response?.data?.message || "Impossible d'envoyer l'e-mail de test.",
+            description:
+                error.response?.data?.message ||
+                "Impossible d'envoyer l'e-mail de test.",
         });
     } finally {
         isSendingTest.value = false;
@@ -211,14 +250,16 @@ const executeSendTestEmail = async () => {
 const executeSendBulkEmail = async () => {
     if (!subject.value || !body.value) {
         toast.error("Champs requis", {
-            description: "Veuillez renseigner l'objet et le message du courriel.",
+            description:
+                "Veuillez renseigner l'objet et le message du courriel.",
         });
         return;
     }
 
     if (effectiveRecipientsCount.value === 0) {
         toast.error("Aucun destinataire", {
-            description: "Veuillez sélectionner ou ajouter au moins un destinataire.",
+            description:
+                "Veuillez sélectionner ou ajouter au moins un destinataire.",
         });
         return;
     }
@@ -251,7 +292,8 @@ const executeSendBulkEmail = async () => {
     } catch (error) {
         console.error(error);
         toast.error("Erreur lors de l'envoi", {
-            description: error.response?.data?.message || "Une erreur est survenue.",
+            description:
+                error.response?.data?.message || "Une erreur est survenue.",
         });
     } finally {
         isSendingBulk.value = false;
@@ -261,19 +303,33 @@ const executeSendBulkEmail = async () => {
 
 <template>
     <Sheet :open="open" @update:open="(val) => emit('update:open', val)">
-        <SheetContent side="right" class="w-full sm:max-w-2xl p-0 flex flex-col h-full bg-background border-l shadow-2xl">
+        <SheetContent
+            side="right"
+            class="w-full sm:max-w-2xl p-0 flex flex-col h-full bg-background border-l shadow-2xl"
+        >
             <!-- En-tête -->
             <SheetHeader class="p-6 pb-4 border-b shrink-0 bg-muted/20 pr-12">
                 <div class="space-y-1">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <SheetTitle class="text-lg font-bold">Rédiger un e-mail groupé</SheetTitle>
-                        <Badge variant="outline" class="bg-primary/10 text-primary border-primary/20 text-xs font-semibold gap-1">
+                        <SheetTitle class="text-lg font-bold"
+                            >Rédiger un e-mail groupé</SheetTitle
+                        >
+                        <Badge
+                            variant="outline"
+                            class="bg-primary/10 text-primary border-primary/20 text-xs font-semibold gap-1"
+                        >
                             <Users class="h-3 w-3" />
-                            {{ pluralize(effectiveRecipientsCount, 'destinataire') }}
+                            {{
+                                pluralize(
+                                    effectiveRecipientsCount,
+                                    "destinataire",
+                                )
+                            }}
                         </Badge>
                     </div>
                     <SheetDescription class="text-xs">
-                        Communiquez avec vos membres sélectionnés en utilisant des modèles ou un message personnalisé.
+                        Communiquez avec vos membres sélectionnés en utilisant
+                        des modèles ou un message personnalisé.
                     </SheetDescription>
                 </div>
             </SheetHeader>
@@ -286,8 +342,12 @@ const executeSendBulkEmail = async () => {
                         <Label class="text-xs font-semibold text-foreground">
                             Destinataires ({{ effectiveRecipientsCount }})
                         </Label>
-                        <span v-if="selectAllMatching" class="text-[11px] text-primary font-medium">
-                            Mode global : tous les {{ totalMatchingCount }} membres filtrés
+                        <span
+                            v-if="selectAllMatching"
+                            class="text-[11px] text-primary font-medium"
+                        >
+                            Mode global : tous les
+                            {{ totalMatchingCount }} membres filtrés
                         </span>
                     </div>
 
@@ -296,13 +356,22 @@ const executeSendBulkEmail = async () => {
 
                 <!-- 2. Sélecteur de Modèle -->
                 <div class="space-y-1.5">
-                    <Label class="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <Label
+                        class="text-xs font-semibold text-foreground flex items-center gap-1.5"
+                    >
                         <FileText class="h-3.5 w-3.5 text-muted-foreground" />
                         Modèle prédéfini
                     </Label>
-                    <Select :model-value="selectedTemplate" @update:model-value="handleTemplateChange">
-                        <SelectTrigger class="h-9 text-xs bg-background cursor-pointer">
-                            <SelectValue placeholder="Choisir un modèle de message" />
+                    <Select
+                        :model-value="selectedTemplate"
+                        @update:model-value="handleTemplateChange"
+                    >
+                        <SelectTrigger
+                            class="h-9 text-xs bg-background cursor-pointer"
+                        >
+                            <SelectValue
+                                placeholder="Choisir un modèle de message"
+                            />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem
@@ -319,7 +388,10 @@ const executeSendBulkEmail = async () => {
 
                 <!-- 3. Objet du mail -->
                 <div class="space-y-1.5">
-                    <Label for="email_subject" class="text-xs font-semibold text-foreground">
+                    <Label
+                        for="email_subject"
+                        class="text-xs font-semibold text-foreground"
+                    >
                         Objet du message <span class="text-destructive">*</span>
                     </Label>
                     <Input
@@ -334,14 +406,24 @@ const executeSendBulkEmail = async () => {
                 <!-- 4. Onglets Rédaction / Aperçu Live -->
                 <div class="space-y-2 pt-1">
                     <Tabs v-model="activeTab" class="w-full">
-                        <div class="flex items-center justify-between gap-2 mb-2">
-                            <Label class="text-xs font-semibold text-foreground">Corps du message</Label>
+                        <div
+                            class="flex items-center justify-between gap-2 mb-2"
+                        >
+                            <Label class="text-xs font-semibold text-foreground"
+                                >Corps du message</Label
+                            >
                             <TabsList class="h-8 bg-muted/60 p-0.5">
-                                <TabsTrigger value="write" class="text-xs px-2.5 py-1 gap-1.5 cursor-pointer">
+                                <TabsTrigger
+                                    value="write"
+                                    class="text-xs px-2.5 py-1 gap-1.5 cursor-pointer"
+                                >
                                     <Pencil class="h-3 w-3" />
                                     <span>Rédiger</span>
                                 </TabsTrigger>
-                                <TabsTrigger value="preview" class="text-xs px-2.5 py-1 gap-1.5 cursor-pointer">
+                                <TabsTrigger
+                                    value="preview"
+                                    class="text-xs px-2.5 py-1 gap-1.5 cursor-pointer"
+                                >
                                     <Eye class="h-3 w-3" />
                                     <span>Aperçu</span>
                                 </TabsTrigger>
@@ -356,92 +438,150 @@ const executeSendBulkEmail = async () => {
                                 placeholder="Bonjour {prenom},&#10;&#10;Nous vous informons que..."
                                 class="w-full rounded-lg border bg-background px-3 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary leading-relaxed font-sans"
                             />
-                            <div class="p-2.5 rounded-lg bg-muted/40 border text-[11px] text-muted-foreground space-y-1">
-                                <p class="font-medium text-foreground flex items-center gap-1">
-                                    <Sparkles class="h-3.5 w-3.5 text-amber-600" />
+                            <div
+                                class="p-2.5 rounded-lg bg-muted/40 border text-[11px] text-muted-foreground space-y-1"
+                            >
+                                <p
+                                    class="font-medium text-foreground flex items-center gap-1"
+                                >
+                                    <Sparkles
+                                        class="h-3.5 w-3.5 text-amber-600"
+                                    />
                                     Variables de personnalisation automatique :
                                 </p>
-                                <div class="flex items-center gap-3 font-mono text-[10px] text-foreground flex-wrap">
-                                    <span class="bg-background px-1.5 py-0.5 rounded border">{prenom} : Prénom du membre</span>
-                                    <span class="bg-background px-1.5 py-0.5 rounded border">{nom} : Nom de famille</span>
-                                    <span class="bg-background px-1.5 py-0.5 rounded border">{email} : Adresse e-mail</span>
+                                <div
+                                    class="flex items-center gap-3 font-mono text-[10px] text-foreground flex-wrap"
+                                >
+                                    <span
+                                        class="bg-background px-1.5 py-0.5 rounded border"
+                                        >{prenom} : Prénom du membre</span
+                                    >
+                                    <span
+                                        class="bg-background px-1.5 py-0.5 rounded border"
+                                        >{nom} : Nom de famille</span
+                                    >
+                                    <span
+                                        class="bg-background px-1.5 py-0.5 rounded border"
+                                        >{email} : Adresse e-mail</span
+                                    >
                                 </div>
                             </div>
                         </TabsContent>
 
                         <!-- Mode Aperçu (Simulateur Webmail) -->
                         <TabsContent value="preview" class="mt-0">
-                            <div class="rounded-xl border bg-muted/30 p-4 space-y-3 shadow-2xs">
-                                <div class="space-y-1 text-xs pb-3 border-b border-border/80 text-muted-foreground">
-                                    <p><strong class="text-foreground">De :</strong> Atelier de Céramique &lt;contact@atelier.be&gt;</p>
-                                    <p>
-                                        <strong class="text-foreground">À :</strong>
-                                        {{ sampleRecipient.full_name }} &lt;{{ sampleRecipient.email }}&gt;
-                                    </p>
-                                    <p><strong class="text-foreground">Objet :</strong> {{ subject || '(Sans objet)' }}</p>
+                            <div
+                                class="rounded-xl border bg-muted/20 overflow-hidden"
+                            >
+                                <div
+                                    v-if="isLoadingPreview"
+                                    class="h-[520px] flex flex-col items-center justify-center gap-2 text-muted-foreground"
+                                >
+                                    <Loader2 class="h-5 w-5 animate-spin" />
+                                    <span class="text-xs"
+                                        >Génération de l’aperçu...</span
+                                    >
                                 </div>
 
-                                <!-- Contenu stylisé -->
-                                <div class="p-4 rounded-lg bg-background border text-xs text-foreground space-y-4 shadow-2xs">
-                                    <div class="text-center pb-3 border-b">
-                                        <span class="font-bold text-xs uppercase tracking-widest text-primary">
-                                            Atelier de Céramique
-                                        </span>
-                                    </div>
-
-                                    <div class="whitespace-pre-wrap leading-relaxed">
-                                        {{ previewRenderedBody }}
-                                    </div>
-
-                                    <div class="pt-3 border-t text-[11px] text-muted-foreground text-center">
-                                        Atelier de Céramique · Tous droits réservés
-                                    </div>
+                                <div
+                                    v-else-if="previewError"
+                                    class="h-40 flex items-center justify-center p-6 text-center text-xs text-muted-foreground"
+                                >
+                                    {{ previewError }}
                                 </div>
+
+                                <iframe
+                                    v-else
+                                    :srcdoc="previewHtml"
+                                    sandbox
+                                    title="Aperçu de l'e-mail"
+                                    class="w-full h-[520px] bg-white border-0"
+                                />
                             </div>
+
+                            <p class="mt-2 text-[11px] text-muted-foreground">
+                                Aperçu généré à partir du véritable template
+                                utilisé pour l'envoi.
+                            </p>
                         </TabsContent>
                     </Tabs>
                 </div>
             </div>
 
             <!-- Pied de page avec actions -->
-            <SheetFooter class="p-4 border-t shrink-0 bg-muted/10 flex flex-row items-center justify-between w-full gap-3">
-                <!-- En bas à gauche : E-mail de test -->
-                <div>
+            <SheetFooter
+                class="p-4 border-t shrink-0 bg-muted/10 flex flex-row items-center justify-between w-full gap-3"
+            >
+                <!-- Gauche : Annuler -->
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    class="h-8 text-xs cursor-pointer"
+                    :disabled="isSendingBulk || isSendingTest"
+                    @click="close"
+                >
+                    Annuler
+                </Button>
+
+                <!-- Droite : Test + Envoi -->
+                <div class="flex items-center gap-2">
                     <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         class="h-8 text-xs gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer"
-                        :disabled="isSendingTest || isSendingBulk || !subject || !body"
+                        :disabled="
+                            isSendingTest || isSendingBulk || !subject || !body
+                        "
                         @click="executeSendTestEmail"
                     >
-                        <Loader2 v-if="isSendingTest" class="h-3.5 w-3.5 animate-spin" />
-                        <FlaskConical v-else class="h-3.5 w-3.5 text-amber-600" />
-                        <span>M'envoyer un test</span>
-                    </Button>
-                </div>
+                        <Loader2
+                            v-if="isSendingTest"
+                            class="h-3.5 w-3.5 animate-spin"
+                        />
+                        <FlaskConical
+                            v-else
+                            class="h-3.5 w-3.5 text-amber-600"
+                        />
 
-                <!-- En bas à droite : Annuler / Envoyer -->
-                <div class="flex items-center gap-2">
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        class="h-8 text-xs cursor-pointer"
-                        @click="close"
-                    >
-                        Annuler
+                        <span>
+                            {{
+                                isSendingTest ? "Envoi..." : "M'envoyer un test"
+                            }}
+                        </span>
                     </Button>
+
                     <Button
                         type="button"
                         size="sm"
                         class="h-8 text-xs gap-1.5 font-semibold shadow-xs cursor-pointer"
-                        :disabled="isSendingBulk || isSendingTest || effectiveRecipientsCount === 0 || !subject || !body"
+                        :disabled="
+                            isSendingBulk ||
+                            isSendingTest ||
+                            effectiveRecipientsCount === 0 ||
+                            !subject ||
+                            !body
+                        "
                         @click="executeSendBulkEmail"
                     >
-                        <Loader2 v-if="isSendingBulk" class="h-3.5 w-3.5 animate-spin" />
+                        <Loader2
+                            v-if="isSendingBulk"
+                            class="h-3.5 w-3.5 animate-spin"
+                        />
                         <Send v-else class="h-3.5 w-3.5" />
-                        <span>Envoyer aux {{ effectiveRecipientsCount }} {{ pluralize(effectiveRecipientsCount, 'destinataire', null, false) }}</span>
+
+                        <span>
+                            Envoyer aux {{ effectiveRecipientsCount }}
+                            {{
+                                pluralize(
+                                    effectiveRecipientsCount,
+                                    "destinataire",
+                                    null,
+                                    false,
+                                )
+                            }}
+                        </span>
                     </Button>
                 </div>
             </SheetFooter>

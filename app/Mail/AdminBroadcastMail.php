@@ -11,51 +11,62 @@ class AdminBroadcastMail extends Mailable
 {
     use Queueable;
 
-    /**
-     * Crée une nouvelle instance du message.
-     */
-    public function __construct(
-        public mixed $recipient,
-        public string $subjectText,
-        public string $bodyText,
-        public bool $isTest = false
-    ) {}
+   public function __construct(
+    public mixed $recipient,
+    public string $subjectText,
+    public string $bodyText,
+    public bool $isTest = false,
+    public bool $isPreview = false
+) {}
 
     /**
-     * En-tête de l'e-mail.
+     * Sujet du message.
      */
     public function envelope(): Envelope
     {
-        $prefix = $this->isTest ? '[TEST] ' : '';
-
         return new Envelope(
-            subject: $prefix . $this->subjectText,
+            subject: ($this->isTest ? '[TEST] ' : '') . $this->subjectText,
         );
     }
 
     /**
-     * Contenu et rendu HTML de l'e-mail.
+     * Rendu HTML du message.
      */
     public function content(): Content
     {
-        $firstName = is_object($this->recipient) ? ($this->recipient->first_name ?? 'Membre') : 'Membre';
-        $lastName = is_object($this->recipient) ? ($this->recipient->last_name ?? '') : '';
-        $email = is_object($this->recipient) ? ($this->recipient->email ?? '') : (string) $this->recipient;
-
-        // Remplacement automatique des variables magiques
-        $processedBody = str_replace(
-            ['{prenom}', '{nom}', '{email}'],
-            [$firstName, $lastName, $email],
-            $this->bodyText
-        );
-
         return new Content(
             view: 'emails.admin-broadcast',
             with: [
                 'recipient' => $this->recipient,
-                'content' => $processedBody,
+                'subject' => $this->subjectText,
+                'content' => $this->processedBody(),
                 'isTest' => $this->isTest,
-            ]
+                'isPreview' => $this->isPreview,
+            ],
+        );
+    }
+
+    /**
+     * Remplace les variables personnalisées du message.
+     */
+    private function processedBody(): string
+    {
+        $firstName = is_object($this->recipient)
+            ? ($this->recipient->first_name ?? 'Membre')
+            : 'Membre';
+
+        $lastName = is_object($this->recipient)
+            ? ($this->recipient->last_name ?? '')
+            : '';
+
+        $email = is_object($this->recipient)
+            ? ($this->recipient->email ?? '')
+            : (string) $this->recipient;
+
+        return str_replace(
+            ['{prenom}', '{nom}', '{email}'],
+            [$firstName, $lastName, $email],
+            $this->bodyText
         );
     }
 }

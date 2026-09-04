@@ -43,7 +43,10 @@ const logout = () => {
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between gap-8 h-20">
                 <!-- 1. Logo / Marque -->
-                <div v-if="$page.url !== '/'" class="flex items-center gap-3">
+                <div
+                    class="flex items-center gap-3"
+                    :class="$page.url === '/' ? 'md:hidden' : ''"
+                >
                     <Link :href="route('home.index')" class="block group">
                         <img
                             src="/images/assets/logo.png"
@@ -362,6 +365,20 @@ const logout = () => {
                     >
                         <User class="w-4 h-4 text-earth" />
                         Espace membre
+                    </Link>
+                    <Link
+                        v-if="isAdmin"
+                        :href="route('dashboard.index')"
+                        class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-blue-100 hover:text-blue-800 transition-colors"
+                        @click="mobileMenuOpen = false"
+                    >
+                        <ShieldUser class="w-4 h-4 text-gray-500" />
+
+                        <span>Panneau admin</span>
+
+                        <ExternalLink
+                            class="w-3.5 h-3.5 text-gray-400 ml-auto"
+                        />
                     </Link>
                     <Link
                         :href="route('profile.show')"
