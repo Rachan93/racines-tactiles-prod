@@ -19,8 +19,7 @@ class CalendrierController extends Controller
 
     public function __invoke(Request $request): Response
     {
-        // 1. Récupération de l'INTÉGRALITÉ des filtres (corrige les switchs)
-        $filters = $request->only([
+        $filters = $this->normalizeFilters($request->only([
             'type_id',
             'course_id',
             'spot_type',
@@ -28,27 +27,38 @@ class CalendrierController extends Controller
             'only_makeups',
             'start_date',
             'end_date',
-        ]);
+        ]));
 
         $user = $request->user();
 
-        // 2. Leçons calculées avec les filtres et détection des inscriptions du compte
-        $lessons = $this->availabilityService->getLessonsForCalendar($filters, $user);
+        $lessons = $this->availabilityService
+            ->getLessonsForCalendar($filters, $user);
 
-        $attendees = $user ? $user->attendees()->orderBy('first_name')->get() : [];
+        $attendees = $user
+            ? $user->attendees()->orderBy('first_name')->get()
+            : [];
 
-        // 3. Récupération des crédits d'absence réellement exploitables avec relations complètes
         $activeAbsences = $user
             ? Absence::query()
                 ->availableForMakeup()
                 ->whereHas('enrollment.module', function ($query) use ($user) {
-                    $query->where('is_active', true)
-                        ->where(function ($q) use ($user) {
-                            $q->where('participant_type', 'App\Models\User')
-                                ->where('participant_id', $user->id);
-                        })->orWhere(function ($q) use ($user) {
-                            $q->where('participant_type', 'App\Models\Attendee')
-                                ->whereIn('participant_id', $user->attendees()->select('id'));
+                    $query
+                        ->where('is_active', true)
+                        ->where(function ($participants) use ($user) {
+                            $participants
+                                ->where(function ($participant) use ($user) {
+                                    $participant
+                                        ->where('participant_type', 'App\Models\User')
+                                        ->where('participant_id', $user->id);
+                                })
+                                ->orWhere(function ($participant) use ($user) {
+                                    $participant
+                                        ->where('participant_type', 'App\Models\Attendee')
+                                        ->whereIn(
+                                            'participant_id',
+                                            $user->attendees()->select('id')
+                                        );
+                                });
                         });
                 })
                 ->with([
@@ -57,8 +67,9 @@ class CalendrierController extends Controller
                 ])
                 ->orderBy('notification_date', 'asc')
                 ->get()
-                // Garde uniquement les absences dont le module a du quota restant
-                ->filter(fn ($absence) => $absence->enrollment?->module?->canBookMakeup())
+                ->filter(
+                    fn ($absence) => $absence->enrollment?->module?->canBookMakeup()
+                )
                 ->values()
             : [];
 
@@ -72,17 +83,40 @@ class CalendrierController extends Controller
 
     public function nextLesson(Request $request): JsonResponse
     {
-        $filters = $request->only([
+        $filters = $this->normalizeFilters($request->only([
             'type_id',
             'course_id',
             'spot_type',
             'hide_full',
             'only_makeups',
             'from_date',
-        ]);
+        ]));
 
         return response()->json([
             'date' => $this->availabilityService->getNextLessonDate($filters),
         ]);
+    }
+
+    /**
+     * Applique les mêmes règles au calendrier et à la prochaine séance.
+     */
+    private function normalizeFilters(array $filters): array
+    {
+        $typeId = filter_var(
+            $filters['type_id'] ?? 1,
+            FILTER_VALIDATE_INT
+        );
+
+        // 1 = collectifs, 2 = stages, 3 = privés.
+        $filters['type_id'] = in_array($typeId, [1, 2, 3], true)
+            ? $typeId
+            : 1;
+
+        // Les rattrapages concernent uniquement les cours collectifs.
+        if ($filters['type_id'] !== 1) {
+            $filters['only_makeups'] = 0;
+        }
+
+        return $filters;
     }
 }

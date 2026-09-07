@@ -51,11 +51,11 @@ import { ArrowRight } from "lucide-vue-next";
                             class="mt-8 inline-flex"
                         >
                             <Button
-                                class="group bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium h-10 px-4 shadow hover:scale-[1.01] transition duration-150"
+                                class="group bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium h-10 px-4 shadow"
                             >
                                 Découvrir les ateliers
                                 <ArrowRight
-                                    class="w-4 h-4 ml-2 group-hover:translate-x-0.5 transition-transform"
+                                    class="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform"
                                 />
                             </Button>
                         </Link>

@@ -44,8 +44,11 @@ const logout = () => {
             <div class="flex items-center justify-between gap-8 h-20">
                 <!-- 1. Logo / Marque -->
                 <div
+                    v-if="page.url.split(/[?#]/)[0] !== '/' || mobileMenuOpen"
                     class="flex items-center gap-3"
-                    :class="$page.url === '/' ? 'md:hidden' : ''"
+                    :class="
+                        page.url.split(/[?#]/)[0] === '/' ? 'md:hidden' : ''
+                    "
                 >
                     <Link :href="route('home.index')" class="block group">
                         <img

@@ -1,10 +1,12 @@
 <script setup>
 import { ref } from "vue";
-import { Head } from "@inertiajs/vue3";
+import { Head, Link } from "@inertiajs/vue3";
 import Nav from "@/Components/custom/Nav.vue";
 import Footer from "@/Components/custom/Footer.vue";
 import ImageLightbox from "@/Components/custom/ImageLightbox.vue";
-import { Clock, Euro } from "lucide-vue-next";
+
+import { Button } from "@/Components/ui/button";
+import { Clock, Euro, ArrowRight } from "lucide-vue-next";
 
 // --- État de la Lightbox pour les flyers ---
 const isLightboxOpen = ref(false);
@@ -262,6 +264,24 @@ const librePlans = [
                             >
                                 Les sessions sont organisées chaque semaine.
                             </p>
+                            <Button
+                                as-child
+                                class="group mt-6 inline-flex h-10 px-4 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium shadow"
+                            >
+                                <Link
+                                    :href="
+                                        route('calendrier.index', {
+                                            type_id: 1,
+                                        })
+                                    "
+                                >
+                                    Voir les cours collectifs
+                                    <ArrowRight
+                                        aria-hidden="true"
+                                        class="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1"
+                                    />
+                                </Link>
+                            </Button>
                         </div>
                     </div>
 
@@ -335,7 +355,7 @@ const librePlans = [
                             </p>
 
                             <div
-                                class="bg-white shadow overflow-hidden sm:rounded-lg my-12 lg:mb-0"
+                                class="bg-white shadow overflow-hidden sm:rounded-lg mt-12"
                             >
                                 <div
                                     class="px-4 py-5 border-b border-gray-200 sm:px-6"
@@ -349,25 +369,40 @@ const librePlans = [
                                         Tarifs
                                     </h3>
                                 </div>
-                                <div>
-                                    <dl>
-                                        <div
-                                            class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6"
+
+                                <dl>
+                                    <div
+                                        class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6"
+                                    >
+                                        <dt
+                                            class="leading-8 font-medium text-gray-500"
                                         >
-                                            <dt
-                                                class="leading-8 font-medium text-gray-500"
-                                            >
-                                                Atelier de 3h
-                                            </dt>
-                                            <dd
-                                                class="mt-1 leading-8 text-gray-900 sm:mt-0 sm:col-span-2"
-                                            >
-                                                50€ par personne
-                                            </dd>
-                                        </div>
-                                    </dl>
-                                </div>
+                                            Atelier de 3h
+                                        </dt>
+                                        <dd
+                                            class="mt-1 leading-8 text-gray-900 sm:mt-0 sm:col-span-2"
+                                        >
+                                            50€ par personne
+                                        </dd>
+                                    </div>
+                                </dl>
                             </div>
+                            <p class="text-lg leading-7 text-gray-500 mt-6">
+                                Vous souhaitez suivre un cours d'initiation ?
+                                Contactez-nous pour organiser votre inscription.
+                            </p>
+                            <Button
+                                as-child
+                                class="group mt-8 mb-8 lg:mb-0 inline-flex h-10 px-4 bg-earth hover:bg-earth/90 text-white text-sm font-medium shadow"
+                            >
+                                <Link :href="route('contact.index')">
+                                   Nous contacter
+                                    <ArrowRight
+                                        aria-hidden="true"
+                                        class="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1"
+                                    />
+                                </Link>
+                            </Button>
                         </div>
 
                         <div class="lg:w-1/2 lg:pl-8">
@@ -404,7 +439,7 @@ const librePlans = [
                             </p>
 
                             <div
-                                class="bg-white shadow overflow-hidden sm:rounded-lg my-12 lg:mb-0"
+                                class="bg-white shadow overflow-hidden sm:rounded-lg mt-12"
                             >
                                 <div
                                     class="px-4 py-5 border-b border-gray-200 sm:px-6"
@@ -418,39 +453,58 @@ const librePlans = [
                                         Tarifs
                                     </h3>
                                 </div>
-                                <div>
-                                    <dl>
-                                        <div
-                                            class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6"
+
+                                <dl>
+                                    <div
+                                        class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6"
+                                    >
+                                        <dt
+                                            class="leading-8 font-medium text-gray-500 text-left"
                                         >
-                                            <dt
-                                                class="leading-8 font-medium text-gray-500 text-left"
-                                            >
-                                                Séance unique de minimum 2h
-                                            </dt>
-                                            <dd
-                                                class="mt-1 leading-8 text-gray-900 sm:mt-0 sm:col-span-2"
-                                            >
-                                                50€/h
-                                            </dd>
-                                        </div>
-                                        <div
-                                            class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6"
+                                            Séance unique de minimum 2h
+                                        </dt>
+                                        <dd
+                                            class="mt-1 leading-8 text-gray-900 sm:mt-0 sm:col-span-2"
                                         >
-                                            <dt
-                                                class="leading-8 font-medium text-gray-500 text-left"
-                                            >
-                                                Module de 5x2h
-                                            </dt>
-                                            <dd
-                                                class="mt-1 leading-8 text-gray-900 sm:mt-0 sm:col-span-2"
-                                            >
-                                                450€ (45€/h)
-                                            </dd>
-                                        </div>
-                                    </dl>
-                                </div>
+                                            50€/h
+                                        </dd>
+                                    </div>
+
+                                    <div
+                                        class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6"
+                                    >
+                                        <dt
+                                            class="leading-8 font-medium text-gray-500 text-left"
+                                        >
+                                            Module de 5x2h
+                                        </dt>
+                                        <dd
+                                            class="mt-1 leading-8 text-gray-900 sm:mt-0 sm:col-span-2"
+                                        >
+                                            450€ (45€/h)
+                                        </dd>
+                                    </div>
+                                </dl>
                             </div>
+
+                            <Button
+                                as-child
+                                class="group mt-8 mb-8 lg:mb-0 inline-flex h-10 px-4 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium shadow"
+                            >
+                                <Link
+                                    :href="
+                                        route('calendrier.index', {
+                                            type_id: 3,
+                                        })
+                                    "
+                                >
+                                    Voir les cours privés
+                                    <ArrowRight
+                                        aria-hidden="true"
+                                        class="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1"
+                                    />
+                                </Link>
+                            </Button>
                         </div>
                         <div class="lg:w-1/2 lg:pl-8">
                             <img
@@ -715,7 +769,25 @@ const librePlans = [
                             </div>
                         </div>
                     </div>
+                    <div class="mt-8 text-left">
+                        <p class="text-lg leading-7 text-gray-500">
+                            Vous souhaitez rejoindre l’atelier libre ?
+                            Contactez-nous pour organiser votre inscription.
+                        </p>
 
+                        <Button
+                            as-child
+                            class="group mt-6 inline-flex h-10 px-4 bg-earth hover:bg-earth/90 text-white text-sm font-medium shadow"
+                        >
+                            <Link :href="route('contact.index')">
+                                Nous contacter
+                                <ArrowRight
+                                    aria-hidden="true"
+                                    class="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1"
+                                />
+                            </Link>
+                        </Button>
+                    </div>
                     <!-- Flyers avec Lightbox -->
                     <div class="mt-12 mb-8">
                         <div

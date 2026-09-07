@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CourseStoreRequest;
 use App\Http\Requests\CourseUpdateRequest;
@@ -45,9 +46,9 @@ class CourseController extends Controller
                     $q->orderBy('date', 'asc')
                         ->with(['overrideInstructor:id,first_name,last_name'])
                         ->withCount([
-                            'enrollments as registered_wheel_count' => fn ($sub) => $sub->where('status', 'registered')->where('spot_type', 'wheel'),
-                            'enrollments as registered_handbuilding_count' => fn ($sub) => $sub->where('status', 'registered')->where('spot_type', 'handbuilding'),
-                            'enrollments as total_registered_count' => fn ($sub) => $sub->where('status', 'registered'),
+                            'enrollments as registered_wheel_count' => fn($sub) => $sub->where('status', 'registered')->where('spot_type', 'wheel'),
+                            'enrollments as registered_handbuilding_count' => fn($sub) => $sub->where('status', 'registered')->where('spot_type', 'handbuilding'),
+                            'enrollments as total_registered_count' => fn($sub) => $sub->where('status', 'registered'),
                         ]);
                 },
             ])
@@ -63,7 +64,7 @@ class CourseController extends Controller
                     if (in_array('instructor', $searchTargets)) {
                         $sub->orWhereHas('instructor', function ($inst) use ($search) {
                             $inst->where('first_name', 'like', "%{$search}%")
-                                 ->orWhere('last_name', 'like', "%{$search}%");
+                                ->orWhere('last_name', 'like', "%{$search}%");
                         });
                     }
 
@@ -72,7 +73,7 @@ class CourseController extends Controller
                             $mod->whereHasMorph('participant', [User::class, Attendee::class], function ($pQuery, $type) use ($search) {
                                 $pQuery->where(function ($nq) use ($search) {
                                     $nq->where('first_name', 'like', "%{$search}%")
-                                       ->orWhere('last_name', 'like', "%{$search}%");
+                                        ->orWhere('last_name', 'like', "%{$search}%");
                                 });
                                 if ($type === User::class) {
                                     $pQuery->orWhere('email', 'like', "%{$search}%");
@@ -125,7 +126,7 @@ class CourseController extends Controller
 
             // Nombre d'élèves inscrits sur des séances futures (pour autoriser ou bloquer la suppression du cours)
             $futureRegisteredCount = $lessons
-                ->filter(fn ($l) => $l->date && $l->date->toDateString() >= $today && ! $l->is_cancelled)
+                ->filter(fn($l) => $l->date && $l->date->toDateString() >= $today && ! $l->is_cancelled)
                 ->sum('total_registered_count');
 
             $futureOverriddenCount = $lessons->filter(function ($l) use ($today) {
@@ -138,7 +139,7 @@ class CourseController extends Controller
                 : 0;
 
             $isPast = ($course->end_date && $course->end_date->toDateString() < $today)
-                && ! $lessons->contains(fn ($l) => $l->date && $l->date->toDateString() >= $today);
+                && ! $lessons->contains(fn($l) => $l->date && $l->date->toDateString() >= $today);
 
             return [
                 'id' => $course->id,
@@ -151,6 +152,9 @@ class CourseController extends Controller
                 'description_en' => $course->description_en,
                 'practical_info' => $course->practical_info,
                 'practical_info_en' => $course->practical_info_en,
+                'cover_image_url' => $course->cover_image
+                    ? Storage::disk('public')->url($course->cover_image)
+                    : null,
                 'is_active' => (bool) $course->is_active,
                 'is_featured' => (bool) $course->is_featured,
                 'is_past' => $isPast,
@@ -314,41 +318,87 @@ class CourseController extends Controller
         $validated = $request->validated();
         $resetLessonIds = array_map('intval', (array) ($validated['reset_lesson_ids'] ?? []));
         $resetFutureOverrides = (bool) ($validated['reset_future_overrides'] ?? false);
+        $oldCoverPath = $course->getRawOriginal('cover_image');
+        $newCoverPath = null;
 
-        DB::transaction(function () use ($course, $validated, $resetLessonIds, $resetFutureOverrides) {
-            $course->update([
-                'name' => $validated['name'],
-                'name_en' => $validated['name_en'] ?? null,
-                'sub_type' => $validated['sub_type'] ?? null,
-                'subtitle' => $validated['subtitle'] ?? null,
-                'subtitle_en' => $validated['subtitle_en'] ?? null,
-                'description' => $validated['description'] ?? null,
-                'description_en' => $validated['description_en'] ?? null,
-                'practical_info' => $validated['practical_info'] ?? null,
-                'practical_info_en' => $validated['practical_info_en'] ?? null,
-                'default_instructor_id' => $validated['default_instructor_id'],
-                'default_start_time' => $validated['default_start_time'],
-                'default_end_time' => $validated['default_end_time'],
-                'default_spots_max_wheel' => $validated['default_spots_max_wheel'],
-                'default_spots_max_handbuilding' => $validated['default_spots_max_handbuilding'],
-                'default_price' => $validated['default_price'],
-                'is_active' => filter_var($validated['is_active'], FILTER_VALIDATE_BOOLEAN),
-                'is_featured' => filter_var($validated['is_featured'] ?? false, FILTER_VALIDATE_BOOLEAN),
-            ]);
+        if ($request->hasFile('cover_image')) {
+            $newCoverPath = $request->file('cover_image')
+                ->store('courses/covers', 'public');
 
-            // Réinitialisation en BDD sans écraser à null
-            if (! empty($resetLessonIds)) {
-                Lesson::where('course_id', $course->id)
-                    ->whereIn('id', $resetLessonIds)
-                    ->update(['is_overridden' => false]);
-            } elseif ($resetFutureOverrides) {
-                Lesson::where('course_id', $course->id)
-                    ->where('date', '>=', now()->toDateString())
-                    ->where('is_cancelled', false)
-                    ->where('is_overridden', true)
-                    ->update(['is_overridden' => false]);
+            if (! $newCoverPath) {
+                throw new \RuntimeException(
+                    'Impossible d’enregistrer l’image de couverture.'
+                );
             }
-        });
+        }
+
+               try {
+            DB::transaction(function () use (
+                $course,
+                $validated,
+                $resetLessonIds,
+                $resetFutureOverrides,
+                $newCoverPath
+            ) {
+                $course->update([
+                    'name' => $validated['name'],
+                    'name_en' => $validated['name_en'] ?? null,
+                    'sub_type' => $validated['sub_type'] ?? null,
+                    'subtitle' => $validated['subtitle'] ?? null,
+                    'subtitle_en' => $validated['subtitle_en'] ?? null,
+                    'description' => $validated['description'] ?? null,
+                    'description_en' => $validated['description_en'] ?? null,
+                    'practical_info' => $validated['practical_info'] ?? null,
+                    'practical_info_en' => $validated['practical_info_en'] ?? null,
+                    'default_instructor_id' => $validated['default_instructor_id'],
+                    'default_start_time' => $validated['default_start_time'],
+                    'default_end_time' => $validated['default_end_time'],
+                    'default_spots_max_wheel' => $validated['default_spots_max_wheel'],
+                    'default_spots_max_handbuilding' => $validated['default_spots_max_handbuilding'],
+                    'default_price' => $validated['default_price'],
+                    'is_active' => filter_var($validated['is_active'], FILTER_VALIDATE_BOOLEAN),
+                    'is_featured' => filter_var($validated['is_featured'] ?? false, FILTER_VALIDATE_BOOLEAN),
+
+                    // Conserver la couverture actuelle sans nouveau fichier.
+                    ...($newCoverPath !== null
+                        ? ['cover_image' => $newCoverPath]
+                        : []),
+                ]);
+
+                // Réinitialisation en BDD sans écraser à null.
+                if (! empty($resetLessonIds)) {
+                    Lesson::where('course_id', $course->id)
+                        ->whereIn('id', $resetLessonIds)
+                        ->update(['is_overridden' => false]);
+                } elseif ($resetFutureOverrides) {
+                    Lesson::where('course_id', $course->id)
+                        ->where('date', '>=', now()->toDateString())
+                        ->where('is_cancelled', false)
+                        ->where('is_overridden', true)
+                        ->update(['is_overridden' => false]);
+                }
+            });
+        } catch (\Throwable $exception) {
+            // Échec en base : retirer le nouveau fichier et garder l'ancien.
+            if ($newCoverPath) {
+                try {
+                    Storage::disk('public')->delete($newCoverPath);
+                } catch (\Throwable $cleanupException) {
+                    report($cleanupException);
+                }
+            }
+
+            throw $exception;
+        }
+
+        // Supprimer l'ancienne couverture seulement après validation en base.
+        if ($newCoverPath && $oldCoverPath && $oldCoverPath !== $newCoverPath) {
+            try {
+                Storage::disk('public')->delete($oldCoverPath);
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+        }
 
         return redirect()->back();
     }
@@ -363,7 +413,7 @@ class CourseController extends Controller
         $hasFutureEnrollments = $course->lessons()
             ->where('date', '>=', $today)
             ->where('is_cancelled', false)
-            ->whereHas('enrollments', fn ($q) => $q->where('status', 'registered'))
+            ->whereHas('enrollments', fn($q) => $q->where('status', 'registered'))
             ->exists();
 
         if ($hasFutureEnrollments) {

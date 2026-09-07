@@ -19,17 +19,12 @@ import { Label } from "@/Components/ui/label";
 import { Badge } from "@/Components/ui/badge";
 import {
     HelpCircle,
-    Calendar,
-    Clock,
     Shell,
     Hand,
     Sparkles,
-    CheckCircle2,
-    AlertCircle,
     ArrowRight,
     Search,
 } from "lucide-vue-next";
-import { pluralize, formatPrice } from "@/Utils/formatters";
 
 const props = defineProps({
     events: { type: Array, default: () => [] },
@@ -41,49 +36,42 @@ const props = defineProps({
 const page = usePage();
 const currentUser = computed(() => page.props.auth?.user);
 
-// Vérifie si le compte possède des crédits d'absence exploitables
 const hasAbsenceCredits = computed(
-    () => props.activeAbsences && props.activeAbsences.length > 0,
+    () => props.activeAbsences.length > 0,
 );
 
-// 1. Initialisation avec type_id = 1 garanti
-const initialFilters = {
-    type_id: Number(props.filters?.type_id) || 1,
-    spot_type: props.filters?.spot_type || "",
-    hide_full:
-        props.filters?.hide_full === "1" ||
-        props.filters?.hide_full === true ||
-        props.filters?.hide_full === 1,
-    only_makeups:
-        props.filters?.only_makeups === "1" ||
-        props.filters?.only_makeups === true ||
-        props.filters?.only_makeups === 1,
-    ...props.filters,
-};
+// Laravel transmet les paramètres du CTA dans props.filters.
+// Le composable normalise le type et utilise 1 par défaut.
+const { filters, setFilter, setDates } =
+    useCalendarFilters(props.filters);
 
-const { filters, setFilter, setDates } = useCalendarFilters(initialFilters);
+const parseBool = (value) =>
+    value === true ||
+    value === 1 ||
+    value === "1" ||
+    value === "true";
 
-const parseBool = (val) =>
-    val === true || val === 1 || val === "1" || val === "true";
-
-// Bindings réactifs des Switchs
+// Bindings réactifs des switches.
 const hideFullChecked = computed({
     get: () => parseBool(filters.hide_full),
-    set: (val) => setFilter("hide_full", val ? 1 : 0),
+    set: (value) => setFilter("hide_full", value ? 1 : 0),
 });
 
 const onlyMakeupsChecked = computed({
     get: () => parseBool(filters.only_makeups),
-    set: (val) => setFilter("only_makeups", val ? 1 : 0),
+    set: (value) => setFilter("only_makeups", value ? 1 : 0),
 });
 
 const activeTypeId = computed(() => {
-    const tid = Number(filters.type_id);
-    return [1, 2, 3].includes(tid) ? tid : 1;
+    const typeId = Number(filters.type_id);
+
+    return [1, 2, 3].includes(typeId) ? typeId : 1;
 });
 
 const handleTypeChange = (typeId) => {
     if (activeTypeId.value === typeId) return;
+
+    nextLessonMessage.value = "";
     setFilter("type_id", typeId);
 };
 
@@ -96,8 +84,9 @@ const calendarRef = ref(null);
 const isFindingNextLesson = ref(false);
 const nextLessonMessage = ref("");
 
-// Détection Mobile pour verrouiller sur la vue Liste
+// Détection mobile pour utiliser la vue liste.
 const isMobile = ref(false);
+
 const checkIsMobile = () => {
     if (typeof window === "undefined") return;
 
@@ -108,13 +97,15 @@ const checkIsMobile = () => {
 
     if (!calendarApi) return;
 
-    // Mobile = uniquement la vue liste
     if (isMobile.value && calendarApi.view.type !== "listWeek") {
         calendarApi.changeView("listWeek");
     }
 
-    // Si on repasse desktop depuis mobile
-    if (wasMobile && !isMobile.value && calendarApi.view.type === "listWeek") {
+    if (
+        wasMobile &&
+        !isMobile.value &&
+        calendarApi.view.type === "listWeek"
+    ) {
         calendarApi.changeView("timeGridWeek");
     }
 };
@@ -132,26 +123,33 @@ onUnmounted(() => {
 
 const todayIso = new Date().toISOString().split("T")[0];
 
-const calendarEvents = computed(() => {
-    return props.events.map((ev) => ({
-        ...ev,
-        extendedProps: { ...ev },
-    }));
-});
+const calendarEvents = computed(() =>
+    props.events.map((event) => ({
+        ...event,
+        extendedProps: { ...event },
+    })),
+);
 
-// Options FullCalendar adaptées Mobile vs Desktop
+// Options FullCalendar adaptées au mobile et au desktop.
 const calendarOptions = computed(() => ({
-    plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
+    plugins: [
+        dayGridPlugin,
+        timeGridPlugin,
+        listPlugin,
+        interactionPlugin,
+    ],
     initialView: isMobile.value ? "listWeek" : "timeGridWeek",
     validRange: {
         start: todayIso,
     },
     headerToolbar: {
-        left: isMobile.value ? "prev,next today" : "prev,next today nextLesson",
-
+        left: isMobile.value
+            ? "prev,next today"
+            : "prev,next today nextLesson",
         center: "title",
-
-        right: isMobile.value ? "" : "timeGridWeek,dayGridMonth,listWeek",
+        right: isMobile.value
+            ? ""
+            : "timeGridWeek,dayGridMonth,listWeek",
     },
     customButtons: {
         nextLesson: {
@@ -190,6 +188,7 @@ function handleEventClick(info) {
 function handleDatesSet(dateInfo) {
     const start = dateInfo.startStr.split("T")[0];
     const end = dateInfo.endStr.split("T")[0];
+
     setDates(start, end);
 }
 
@@ -205,24 +204,39 @@ async function findNextLesson() {
             window.location.origin,
         );
 
-        if (activeTypeId.value)
-            url.searchParams.set("type_id", activeTypeId.value);
-        if (filters.course_id)
+        url.searchParams.set("type_id", String(activeTypeId.value));
+
+        if (filters.course_id) {
             url.searchParams.set("course_id", filters.course_id);
-        if (filters.spot_type)
+        }
+
+        if (filters.spot_type) {
             url.searchParams.set("spot_type", filters.spot_type);
-        if (parseBool(filters.hide_full))
+        }
+
+        if (parseBool(filters.hide_full)) {
             url.searchParams.set("hide_full", "1");
-        if (parseBool(filters.only_makeups))
+        }
+
+        // Les rattrapages concernent uniquement les collectifs.
+        if (
+            activeTypeId.value === 1 &&
+            parseBool(filters.only_makeups)
+        ) {
             url.searchParams.set("only_makeups", "1");
-        if (filters.end_date)
+        }
+
+        if (filters.end_date) {
             url.searchParams.set("from_date", filters.end_date);
+        }
 
         const response = await fetch(url, {
             headers: { Accept: "application/json" },
         });
 
-        if (!response.ok) throw new Error("Erreur");
+        if (!response.ok) {
+            throw new Error("Erreur lors de la recherche");
+        }
 
         const { date } = await response.json();
 
@@ -261,6 +275,7 @@ function requireAuthOrProceed(callback) {
 function handleSelectRegular(lesson) {
     requireAuthOrProceed(() => {
         if (lesson) selectedLesson.value = lesson;
+
         bookingMode.value = "regular";
         isDetailModalOpen.value = false;
         isBookingModalOpen.value = true;
@@ -270,6 +285,7 @@ function handleSelectRegular(lesson) {
 function handleSelectMakeup(lesson) {
     requireAuthOrProceed(() => {
         if (lesson) selectedLesson.value = lesson;
+
         bookingMode.value = "makeup";
         isDetailModalOpen.value = false;
         isBookingModalOpen.value = true;

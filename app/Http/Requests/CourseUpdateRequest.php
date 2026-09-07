@@ -40,7 +40,7 @@ class CourseUpdateRequest extends FormRequest
             'reset_lesson_ids' => ['nullable', 'array'],
             'reset_lesson_ids.*' => ['integer', 'exists:lessons,id'],
 
-            // Contenu éditorial & bilingue (spécifique aux Stages & Masterclasses)
+            // Contenu éditorial & bilingue (spécifique aux Stages)
             'name_en' => ['nullable', 'string', 'max:255'],
             'sub_type' => ['nullable', 'string', Rule::in(['wheel', 'external', 'themed', 'one-off'])],
             'subtitle' => ['nullable', 'string', 'max:255'],
@@ -49,6 +49,12 @@ class CourseUpdateRequest extends FormRequest
             'description_en' => ['nullable', 'string', 'max:10000'],
             'practical_info' => ['nullable', 'string', 'max:10000'],
             'practical_info_en' => ['nullable', 'string', 'max:10000'],
+            'cover_image' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:5120',
+            ],
         ];
     }
 
@@ -91,13 +97,13 @@ class CourseUpdateRequest extends FormRequest
             if (! $resetFutureOverrides) {
                 $futureLessonsQuery->where(function ($q) use ($resetLessonIds) {
                     $q->where('is_overridden', false)
-                      ->when(! empty($resetLessonIds), fn ($sub) => $sub->orWhereIn('id', $resetLessonIds));
+                        ->when(! empty($resetLessonIds), fn($sub) => $sub->orWhereIn('id', $resetLessonIds));
                 });
             }
 
             $futureLessons = $futureLessonsQuery->withCount([
-                'enrollments as registered_wheel_count' => fn ($q) => $q->where('status', 'registered')->where('spot_type', 'wheel'),
-                'enrollments as registered_handbuilding_count' => fn ($q) => $q->where('status', 'registered')->where('spot_type', 'handbuilding'),
+                'enrollments as registered_wheel_count' => fn($q) => $q->where('status', 'registered')->where('spot_type', 'wheel'),
+                'enrollments as registered_handbuilding_count' => fn($q) => $q->where('status', 'registered')->where('spot_type', 'handbuilding'),
             ])->get();
 
             foreach ($futureLessons as $lesson) {
@@ -160,6 +166,9 @@ class CourseUpdateRequest extends FormRequest
         return [
             'default_end_time.after' => 'L\'heure de fin doit être postérieure à l\'heure de début.',
             'sub_type.in' => 'La catégorie de stage sélectionnée est invalide.',
+            'cover_image.image' => 'Le fichier doit être une image.',
+            'cover_image.mimes' => 'Formats acceptés : JPG, PNG et WebP.',
+            'cover_image.max' => 'L’image ne doit pas dépasser 5 Mo.',
         ];
     }
 }

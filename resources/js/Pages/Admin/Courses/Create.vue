@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { Link } from "@inertiajs/vue3";
 import { useForm } from "laravel-precognition-vue-inertia";
 import { toast } from "vue-sonner";
@@ -85,6 +85,7 @@ const form = useForm("post", route("courses.store"), {
     default_instructor_id: props.instructors[0]?.id
         ? String(props.instructors[0].id)
         : "",
+    cover_image: null,
     sub_type: null,
     subtitle: "",
     subtitle_en: "",
@@ -119,6 +120,80 @@ const isStage = computed(() => {
         (t) => String(t.id) === String(form.type_id),
     );
     return isStageType(selectedType?.name);
+});
+
+// Image de couverture facultative, commune aux versions FR / EN.
+// Le backend devra valider et enregistrer le champ multipart "image".
+const imageInput = ref(null);
+const imagePreviewUrl = ref("");
+const imageError = ref("");
+const isDraggingImage = ref(false);
+const imageMaxBytes = 5 * 1024 * 1024;
+const imageMimeTypes = ["image/jpeg", "image/png", "image/webp"];
+
+const releaseImagePreview = () => {
+    if (imagePreviewUrl.value) URL.revokeObjectURL(imagePreviewUrl.value);
+    imagePreviewUrl.value = "";
+};
+
+const removeImage = () => {
+    releaseImagePreview();
+    form.cover_image = null;
+    imageError.value = "";
+    form.clearErrors("cover_image");
+    if (imageInput.value) imageInput.value.value = "";
+};
+
+const selectImage = (files) => {
+    if (!isStage.value || form.processing || !files?.length) return;
+    imageError.value = "";
+    if (files.length !== 1) {
+        imageError.value = "Choisissez une seule image de couverture.";
+        return;
+    }
+    const file = files[0];
+    if (!imageMimeTypes.includes(file.type)) {
+        imageError.value = "Choisissez une image JPG, PNG ou WebP.";
+        return;
+    }
+    if (!file.size || file.size > imageMaxBytes) {
+        imageError.value =
+            "L’image doit être non vide et ne pas dépasser 5 Mo.";
+        return;
+    }
+    releaseImagePreview();
+    form.cover_image = file;
+    form.clearErrors("cover_image");
+    imagePreviewUrl.value = URL.createObjectURL(file);
+};
+
+const handleImageChange = (event) => {
+    selectImage(event.target.files);
+    // Autorise à sélectionner de nouveau le même fichier après une erreur.
+    event.target.value = "";
+};
+
+const handleImageDrop = (event) => {
+    isDraggingImage.value = false;
+    selectImage(event.dataTransfer?.files);
+};
+
+const handleImagePreviewError = () => {
+    removeImage();
+    imageError.value =
+        "Cette image est illisible. Choisissez un autre fichier.";
+};
+
+watch(isStage, (value) => {
+    if (!value) {
+        removeImage();
+        isDraggingImage.value = false;
+    }
+});
+
+onUnmounted(() => {
+    releaseImagePreview();
+    clearTimeout(previewTimeout);
 });
 
 // Numérotation dynamique des étapes
@@ -247,6 +322,8 @@ watch(
 
 // Soumission avec notifications Sonner
 const submit = () => {
+    if (form.processing) return;
+    if (!isStage.value) removeImage();
     form.submit({
         preserveScroll: true,
         onSuccess: () => {
@@ -697,6 +774,179 @@ const submit = () => {
                                         {{ form.errors.sub_type }}
                                     </p>
                                 </div>
+
+                                <!-- Couverture commune aux deux langues : stages uniquement. -->
+                                <section
+                                    class="space-y-3 rounded-lg border bg-background p-4"
+                                    aria-labelledby="stage-image-title"
+                                >
+                                    <div class="space-y-1">
+                                        <h3
+                                            id="stage-image-title"
+                                            class="text-sm font-semibold"
+                                        >
+                                            Image de couverture
+                                            <span
+                                                class="font-normal text-muted-foreground"
+                                            >
+                                                (facultative)
+                                            </span>
+                                        </h3>
+
+                                        <p
+                                            id="stage-image-help"
+                                            class="text-xs leading-relaxed text-muted-foreground"
+                                        >
+                                            Une image pour illustrer la carte du
+                                            stage, commune au français et à
+                                            l’anglais. JPG, PNG ou WebP · 5 Mo
+                                            maximum. Privilégiez une photo avec
+                                            le sujet au centre.
+                                        </p>
+                                    </div>
+
+                                    <div
+                                        class="rounded-lg border-2 border-dashed p-3 transition-colors"
+                                        :class="
+                                            isDraggingImage
+                                                ? 'border-primary bg-primary/5'
+                                                : 'border-muted-foreground/25'
+                                        "
+                                        @dragover.prevent="
+                                            isDraggingImage = !form.processing
+                                        "
+                                        @dragleave.self="
+                                            isDraggingImage = false
+                                        "
+                                        @drop.prevent="handleImageDrop"
+                                    >
+                                        <div
+                                            v-if="imagePreviewUrl"
+                                            class="overflow-hidden rounded-md border bg-muted/30"
+                                        >
+                                            <img
+                                                :key="imagePreviewUrl"
+                                                :src="imagePreviewUrl"
+                                                alt="Aperçu de l’image de couverture du stage"
+                                                class="max-h-80 w-full object-contain"
+                                                @error="handleImagePreviewError"
+                                            />
+                                        </div>
+
+                                        <div
+                                            class="flex flex-col items-center justify-center gap-3 text-center"
+                                            :class="
+                                                imagePreviewUrl
+                                                    ? 'pt-3'
+                                                    : 'min-h-40'
+                                            "
+                                        >
+                                            <p
+                                                v-if="!imagePreviewUrl"
+                                                class="text-xs text-muted-foreground"
+                                            >
+                                                Glissez une image ici ou
+                                                choisissez un fichier.
+                                            </p>
+
+                                            <div
+                                                class="flex flex-wrap items-center justify-center gap-2"
+                                            >
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    :disabled="form.processing"
+                                                    @click="imageInput?.click()"
+                                                >
+                                                    {{
+                                                        imagePreviewUrl
+                                                            ? "Remplacer l’image"
+                                                            : "Choisir une image"
+                                                    }}
+                                                </Button>
+
+                                                <Button
+                                                    v-if="imagePreviewUrl"
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    :disabled="form.processing"
+                                                    @click="removeImage"
+                                                >
+                                                    Retirer
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        <input
+                                            ref="imageInput"
+                                            type="file"
+                                            class="hidden"
+                                            accept="image/jpeg,image/png,image/webp"
+                                            aria-label="Image de couverture du stage"
+                                            aria-describedby="stage-image-help stage-image-error"
+                                            :disabled="form.processing"
+                                            @change="handleImageChange"
+                                        />
+                                    </div>
+
+                                    <p
+                                        v-if="imagePreviewUrl"
+                                        class="text-center text-xs text-muted-foreground"
+                                    >
+                                        Cet aperçu ne représente pas l’affichage
+                                        final : le cadrage et les dimensions
+                                        pourront varier sur la carte du stage.
+                                    </p>
+
+                                    <p
+                                        id="stage-image-error"
+                                        role="alert"
+                                        class="text-xs text-destructive"
+                                    >
+                                        {{
+                                            imageError ||
+                                            form.errors.cover_image
+                                        }}
+                                    </p>
+
+                                    <p class="text-xs text-muted-foreground">
+                                        L’image sera envoyée à la création du
+                                        stage. Si vous changez de formule, la
+                                        sélection sera retirée.
+                                    </p>
+
+                                    <div
+                                        v-if="
+                                            form.processing &&
+                                            form.cover_image &&
+                                            form.progress
+                                        "
+                                        class="space-y-1"
+                                        role="status"
+                                        aria-live="polite"
+                                    >
+                                        <progress
+                                            class="h-2 w-full"
+                                            :value="
+                                                form.progress.percentage || 0
+                                            "
+                                            max="100"
+                                            aria-label="Envoi de l’image"
+                                        ></progress>
+
+                                        <p
+                                            class="text-xs text-muted-foreground"
+                                        >
+                                            Envoi :
+                                            {{
+                                                form.progress.percentage || 0
+                                            }}
+                                            %
+                                        </p>
+                                    </div>
+                                </section>
 
                                 <!-- Onglets Bilingues FR / EN -->
                                 <Tabs default-value="fr" class="w-full pt-1">
