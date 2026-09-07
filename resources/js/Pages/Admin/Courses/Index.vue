@@ -26,7 +26,7 @@ import {
 } from "@/Components/ui/dialog";
 import {
     Plus,
-    GraduationCap,
+    LibraryBig,
     Trash2,
     AlertTriangle,
     ChevronRight,
@@ -321,7 +321,7 @@ const executeDeleteCourse = () => {
                 <div
                     class="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center"
                 >
-                    <GraduationCap class="h-6 w-6" />
+                    <LibraryBig class="h-6 w-6" />
                 </div>
                 <div class="space-y-1">
                     <h3 class="font-bold text-base text-foreground">

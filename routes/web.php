@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Admin\InstructorController;
+
 use App\Http\Controllers\Admin\CourseController as AdminCourseController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\LessonController as AdminLessonController;
@@ -200,6 +202,12 @@ Route::middleware([
 
     // Tableau de bord principal
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard.index');
+
+    // --- INSTRUCTEURS ---
+    Route::get('/instructeurs', [InstructorController::class, 'index'])->name('instructors.index');
+    Route::post('/instructeurs', [InstructorController::class, 'store'])->name('instructors.store');
+    Route::patch('/instructeurs/{instructor}', [InstructorController::class, 'update'])->name('instructors.update');
+    Route::delete('/instructeurs/{instructor}', [InstructorController::class, 'destroy'])->name('instructors.destroy');
 
     // --- COURS ---
     Route::get('/cours', [AdminCourseController::class, 'index'])->name('courses.index');

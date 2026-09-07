@@ -13,9 +13,10 @@ return new class extends Migration
     {
         Schema::create('instructors', function (Blueprint $table) {
             $table->id();
-            // éventuellement relier à users si on veut que les instructeurs soient des utilisateurs
+             // éventuellement relier à users si on veut que les instructeurs soient des utilisateurs
             $table->string('first_name');
             $table->string('last_name');
+            $table->enum('type', ['staff', 'external'])->default('staff');
             $table->text('bio');
             $table->timestamps();
         });

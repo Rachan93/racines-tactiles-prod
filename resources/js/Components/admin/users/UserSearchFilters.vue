@@ -20,7 +20,7 @@ import {
     X,
     RotateCcw,
     BookOpen,
-    GraduationCap,
+    LibraryBig,
     Check,
 } from "lucide-vue-next";
 import DateFilterPopover from "./DateFilterPopover.vue";
@@ -300,7 +300,7 @@ watch(
                         class="h-9 text-xs bg-background gap-1.5 cursor-pointer"
                         :class="courseId !== 'all' ? 'border-primary text-primary font-semibold' : ''"
                     >
-                        <GraduationCap class="h-3.5 w-3.5 shrink-0" :class="courseId !== 'all' ? 'text-primary' : 'text-muted-foreground'" />
+                        <LibraryBig class="h-3.5 w-3.5 shrink-0" :class="courseId !== 'all' ? 'text-primary' : 'text-muted-foreground'" />
                         <SelectValue placeholder="Inscrit au cours" />
                     </SelectTrigger>
                     <SelectContent class="max-h-60">

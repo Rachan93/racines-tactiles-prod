@@ -37,19 +37,17 @@ import {
     PanelLeftClose,
     PanelLeftOpen,
     CircleHelp,
+    LibraryBig,
 } from "lucide-vue-next";
-
 defineProps({
     title: {
         type: String,
         default: "",
     },
 });
-
 const page = usePage();
 const isMobileOpen = ref(false);
 const isCollapsed = ref(false);
-
 // Charger l'état de la sidebar depuis le localStorage au montage
 onMounted(() => {
     const savedState = localStorage.getItem("admin_sidebar_collapsed");
@@ -57,7 +55,6 @@ onMounted(() => {
         isCollapsed.value = savedState === "true";
     }
 });
-
 const toggleSidebar = () => {
     isCollapsed.value = !isCollapsed.value;
     localStorage.setItem(
@@ -65,16 +62,13 @@ const toggleSidebar = () => {
         isCollapsed.value.toString(),
     );
 };
-
 const user = computed(() => page.props.auth?.user);
-
 const userInitials = computed(() => {
     if (!user.value) return "AD";
     const first = user.value.first_name?.[0] || "";
     const last = user.value.last_name?.[0] || "";
     return (first + last).toUpperCase() || "A";
 });
-
 const navigationGroups = computed(() => [
     {
         group: "Gestion Atelier",
@@ -88,10 +82,16 @@ const navigationGroups = computed(() => [
             {
                 label: "Cours & Séances",
                 route: "courses.index",
-                icon: GraduationCap,
+                icon: LibraryBig,
                 active:
                     route().current("courses.*") ||
                     route().current("lessons.*"),
+            },
+            {
+                label: "Instructeurs",
+                route: "instructors.index",
+                icon: GraduationCap,
+                active: route().current("instructors.*"),
             },
             {
                 label: "Membres & Invités",
@@ -139,21 +139,17 @@ const navigationGroups = computed(() => [
         ],
     },
 ]);
-
 const logout = () => {
     router.post(route("logout"));
 };
 </script>
-
 <template>
     <!-- Conteneur pleine hauteur bloqué (évite le scroll sur la page globale) -->
     <div class="h-screen w-screen overflow-hidden flex bg-muted/40 antialiased">
         <Head
             :title="title ? `${title} - Admin Studio` : 'Administration Studio'"
         />
-
         <Banner />
-
         <!-- ========================================================= -->
         <!-- 1. SIDEBAR DESKTOP (FIXE & COLLAPSIBLE)                   -->
         <!-- ========================================================= -->
@@ -178,20 +174,17 @@ const logout = () => {
                     >
                         <ShieldUser class="h-5 w-5" />
                     </div>
-
                     <div class="flex flex-col min-w-0">
                         <span
                             class="font-semibold text-sm tracking-tight truncate"
                         >
                             Racines-Tactiles
                         </span>
-
                         <span class="text-xs text-muted-foreground truncate">
                             Panneau de gestion
                         </span>
                     </div>
                 </div>
-
                 <!-- En mode réduit, seul le bouton reste visible -->
                 <Button
                     variant="ghost"
@@ -201,11 +194,9 @@ const logout = () => {
                     @click="toggleSidebar"
                 >
                     <PanelLeftOpen v-if="isCollapsed" class="h-4 w-4" />
-
                     <PanelLeftClose v-else class="h-4 w-4" />
                 </Button>
             </div>
-
             <!-- Navigation Scrollable indépendamment -->
             <div class="flex-1 overflow-y-auto py-5 px-3 space-y-6">
                 <div
@@ -220,7 +211,6 @@ const logout = () => {
                         {{ group.group }}
                     </h4>
                     <div v-else class="h-px bg-border my-2 mx-1" />
-
                     <nav class="space-y-1">
                         <template v-for="item in group.items" :key="item.label">
                             <!-- Lien actif -->
@@ -244,7 +234,6 @@ const logout = () => {
                                     item.label
                                 }}</span>
                             </Link>
-
                             <!-- Lien futur (désactivé) -->
                             <div
                                 v-else
@@ -281,7 +270,6 @@ const logout = () => {
                     </nav>
                 </div>
             </div>
-
             <!-- Footer Sidebar -->
             <div class="p-3 border-t shrink-0">
                 <Link
@@ -298,7 +286,6 @@ const logout = () => {
                 </Link>
             </div>
         </aside>
-
         <!-- ========================================================= -->
         <!-- 2. ZONE DE CONTENU PRINCIPALE (SCROLL INTERNE)           -->
         <!-- ========================================================= -->
@@ -335,7 +322,6 @@ const logout = () => {
                                     >
                                         <ShieldUser class="h-4 w-4" />
                                     </div>
-
                                     <span>Racines-Tactiles</span>
                                 </SheetTitle>
                             </SheetHeader>
@@ -404,7 +390,6 @@ const logout = () => {
                             </div>
                         </SheetContent>
                     </Sheet>
-
                     <h1
                         v-if="title"
                         class="font-semibold text-lg sm:text-xl text-foreground tracking-tight"
@@ -412,7 +397,6 @@ const logout = () => {
                         {{ title }}
                     </h1>
                 </div>
-
                 <!-- Menu Utilisateur -->
                 <div class="flex items-center gap-3">
                     <DropdownMenu>
@@ -453,7 +437,6 @@ const logout = () => {
                                         {{ user?.first_name }}
                                         {{ user?.last_name }}
                                     </p>
-
                                     <p
                                         class="text-[11px] font-normal text-muted-foreground truncate"
                                     >
@@ -461,9 +444,7 @@ const logout = () => {
                                     </p>
                                 </div>
                             </DropdownMenuLabel>
-
                             <DropdownMenuSeparator />
-
                             <!-- Retour site public -->
                             <DropdownMenuItem as-child>
                                 <Link
@@ -471,27 +452,22 @@ const logout = () => {
                                     class="cursor-pointer flex items-center gap-2"
                                 >
                                     <ExternalLink class="h-4 w-4" />
-
                                     <span>Retour au site</span>
                                 </Link>
                             </DropdownMenuItem>
-
                             <DropdownMenuSeparator />
-
                             <!-- Déconnexion -->
                             <DropdownMenuItem
                                 class="cursor-pointer flex items-center gap-2 text-destructive focus:text-destructive"
                                 @click="logout"
                             >
                                 <LogOut class="h-4 w-4" />
-
                                 <span>Déconnexion</span>
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
             </header>
-
             <!-- Seule cette zone défile -->
             <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
                 <div class="max-w-7xl mx-auto w-full">
