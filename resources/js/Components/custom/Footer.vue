@@ -57,6 +57,15 @@ const currentYear = new Date().getFullYear();
 
                             <li>
                                 <Link
+                                    :href="route('gallery.index')"
+                                    class="transition-colors hover:text-white"
+                                >
+                                    Galerie
+                                </Link>
+                            </li>
+
+                            <li>
+                                <Link
                                     :href="route('faq.index')"
                                     class="transition-colors hover:text-white"
                                 >

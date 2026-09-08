@@ -22,20 +22,20 @@ import {
     ExternalLink,
 } from "lucide-vue-next";
 import CookieBanner from "@/Components/custom/CookieBanner.vue";
-
 const page = usePage();
 const currentUser = computed(() => page.props.auth?.user);
 const isAdmin = computed(() => Number(currentUser.value?.role_id) === 1);
 const isAteliersActive = computed(
     () => page.url.split(/[?#]/)[0] === route("ateliers.index"),
 );
+const isGalleryActive = computed(() =>
+    page.url.split(/[?#]/)[0].startsWith("/galerie"),
+);
 const mobileMenuOpen = ref(false);
-
 const logout = () => {
     router.post(route("logout"));
 };
 </script>
-
 <template>
     <header
         class="bg-white border-b border-gray-100 sticky top-0 z-40 font-brand"
@@ -58,11 +58,10 @@ const logout = () => {
                         />
                     </Link>
                 </div>
-
                 <!-- 2. Liens de Navigation Desktop -->
                 <nav
                     :class="[
-                        'hidden md:flex items-center space-x-7 text-sm font-medium md:mr-auto',
+                        'hidden md:flex items-center space-x-4 lg:space-x-7 text-sm font-medium md:mr-auto',
                         $page.url === '/' ? 'md:ml-16' : '',
                     ]"
                 >
@@ -123,7 +122,6 @@ const logout = () => {
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
-
                     <Link
                         href="/stages"
                         :class="[
@@ -135,7 +133,6 @@ const logout = () => {
                     >
                         Stages
                     </Link>
-
                     <Link
                         :href="route('calendrier.index')"
                         :class="[
@@ -147,7 +144,18 @@ const logout = () => {
                     >
                         <span>Calendrier</span>
                     </Link>
-
+                    <Link
+                        :href="route('gallery.index')"
+                        :aria-current="isGalleryActive ? 'page' : undefined"
+                        :class="[
+                            'group relative transition-colors duration-150 after:absolute after:-bottom-1 after:left-0 after:h-px after:w-full after:origin-left after:bg-current after:transition-transform after:duration-200',
+                            isGalleryActive
+                                ? 'text-gray-900 font-semibold after:scale-x-100'
+                                : 'text-gray-600 hover:text-gray-900 after:scale-x-0 hover:after:scale-x-100',
+                        ]"
+                    >
+                        Galerie
+                    </Link>
                     <Link
                         :href="route('faq.index')"
                         :class="[
@@ -159,9 +167,7 @@ const logout = () => {
                     >
                         FAQ
                     </Link>
-
                     <Separator orientation="vertical" class="h-5 bg-gray-200" />
-
                     <Link
                         :href="route('contact.index')"
                         :class="[
@@ -174,7 +180,6 @@ const logout = () => {
                         Contact
                     </Link>
                 </nav>
-
                 <!-- 3. Zone Utilisateur (Connecté vs Invité) -->
                 <div class="hidden md:flex items-center gap-3">
                     <!-- Utilisateur Connecté -> Dropdown Profil -->
@@ -199,7 +204,6 @@ const logout = () => {
                                     />
                                 </button>
                             </DropdownMenuTrigger>
-
                             <DropdownMenuContent
                                 align="end"
                                 class="w-56 bg-white border-gray-200 shadow-md font-brand"
@@ -214,7 +218,6 @@ const logout = () => {
                                     >
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-
                                 <!-- Lien Espace Membre -->
                                 <DropdownMenuItem as-child>
                                     <Link
@@ -234,15 +237,12 @@ const logout = () => {
                                         <ShieldUser
                                             class="w-4 h-4 text-gray-500"
                                         />
-
                                         <span>Panneau admin</span>
-
                                         <ExternalLink
                                             class="w-3.5 h-3.5 text-gray-400 ml-auto"
                                         />
                                     </Link>
                                 </DropdownMenuItem>
-
                                 <!-- Lien Paramètres (Profil Jetstream) -->
                                 <DropdownMenuItem as-child>
                                     <Link
@@ -255,9 +255,7 @@ const logout = () => {
                                         <span>Paramètres du compte</span>
                                     </Link>
                                 </DropdownMenuItem>
-
                                 <DropdownMenuSeparator />
-
                                 <!-- Déconnexion -->
                                 <DropdownMenuItem
                                     class="cursor-pointer text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700 flex items-center gap-2 py-2 text-xs sm:text-sm"
@@ -269,7 +267,6 @@ const logout = () => {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </template>
-
                     <!-- Invité (Non connecté) -->
                     <template v-else>
                         <Link :href="route('login')">
@@ -291,7 +288,6 @@ const logout = () => {
                         </Link>
                     </template>
                 </div>
-
                 <!-- 4. Bouton Menu Hamburger Mobile -->
                 <div class="ml-auto flex items-center md:hidden">
                     <button
@@ -308,7 +304,6 @@ const logout = () => {
                 </div>
             </div>
         </div>
-
         <!-- 5. Menu Mobile Déroulant -->
         <div
             v-show="mobileMenuOpen"
@@ -337,6 +332,19 @@ const logout = () => {
                     <span>Calendrier</span>
                 </Link>
                 <Link
+                    :href="route('gallery.index')"
+                    :aria-current="isGalleryActive ? 'page' : undefined"
+                    class="block px-3 py-2 rounded-lg text-base font-medium"
+                    :class="
+                        isGalleryActive
+                            ? 'bg-gray-100 text-gray-900 font-semibold'
+                            : 'text-gray-800 hover:bg-gray-50'
+                    "
+                    @click="mobileMenuOpen = false"
+                >
+                    Galerie
+                </Link>
+                <Link
                     href="/faq"
                     class="block px-3 py-2 rounded-lg text-base font-medium text-gray-800 hover:bg-gray-50"
                     @click="mobileMenuOpen = false"
@@ -351,7 +359,6 @@ const logout = () => {
                     Contact
                 </Link>
             </div>
-
             <!-- Mobile Auth Section -->
             <div class="pt-4 border-t border-gray-100 space-y-2">
                 <template v-if="currentUser">
@@ -376,9 +383,7 @@ const logout = () => {
                         @click="mobileMenuOpen = false"
                     >
                         <ShieldUser class="w-4 h-4 text-gray-500" />
-
                         <span>Panneau admin</span>
-
                         <ExternalLink
                             class="w-3.5 h-3.5 text-gray-400 ml-auto"
                         />
@@ -400,7 +405,6 @@ const logout = () => {
                         Déconnexion
                     </button>
                 </template>
-
                 <template v-else>
                     <div class="grid grid-cols-2 gap-2 pt-1">
                         <Link :href="route('login')" class="w-full">

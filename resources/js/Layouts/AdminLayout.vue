@@ -39,6 +39,7 @@ import {
     CircleHelp,
     LibraryBig,
     CalendarX,
+    Images,
 } from "lucide-vue-next";
 defineProps({
     title: {
@@ -70,82 +71,93 @@ const userInitials = computed(() => {
     const last = user.value.last_name?.[0] || "";
     return (first + last).toUpperCase() || "A";
 });
-const navigationGroups = computed(() => [
-    {
-        group: "Gestion Atelier",
-        items: [
-            {
-                label: "Tableau de bord",
-                route: "dashboard.index",
-                icon: LayoutDashboard,
-                active: route().current("dashboard.index"),
-            },
-            {
-                label: "Cours & Séances",
-                route: "courses.index",
-                icon: LibraryBig,
-                active:
-                    route().current("courses.*") ||
-                    route().current("lessons.*"),
-            },
-            {
-                label: "Congés & Fermetures",
-                route: "studio-closures.index",
-                icon: CalendarX,
-                active: route().current("studio-closures.*"),
-            },
-            {
-                label: "Instructeurs",
-                route: "instructors.index",
-                icon: GraduationCap,
-                active: route().current("instructors.*"),
-            },
-            {
-                label: "Répertoire des utilisateurs",
-                route: "users.index",
-                icon: Users,
-                active: route().current("users.*"),
-            },
-        ],
-    },
-    {
-        group: "Contenu du site",
-        items: [
-            {
-                label: "FAQ",
-                route: "faqs.index",
-                icon: CircleHelp,
-                active: route().current("faqs.*"),
-            },
-        ],
-    },
-    {
-        group: "Atelier & Boutique",
-        items: [
-            {
-                label: "Terres & Cuissons",
-                icon: Flame,
-                active: false,
-                isUpcoming: true,
-                badge: "Bientôt",
-            },
-            {
-                label: "Boutique / Ventes",
-                icon: ShoppingBag,
-                active: false,
-                isUpcoming: true,
-                badge: "Bientôt",
-            },
-            {
-                label: "Soldes & Fidélité",
-                icon: Coins,
-                active: false,
-                isUpcoming: true,
-                badge: "Bientôt",
-            },
-        ],
-    },
-]);
+const navigationGroups = computed(() => {
+    // Recalculer les liens actifs après une navigation Inertia.
+    page.url;
+
+    return [
+        {
+            group: "Gestion Atelier",
+            items: [
+                {
+                    label: "Tableau de bord",
+                    route: "dashboard.index",
+                    icon: LayoutDashboard,
+                    active: route().current("dashboard.index"),
+                },
+                {
+                    label: "Cours & Séances",
+                    route: "courses.index",
+                    icon: LibraryBig,
+                    active:
+                        route().current("courses.*") ||
+                        route().current("lessons.*"),
+                },
+                {
+                    label: "Congés & Fermetures",
+                    route: "studio-closures.index",
+                    icon: CalendarX,
+                    active: route().current("studio-closures.*"),
+                },
+                {
+                    label: "Instructeurs",
+                    route: "instructors.index",
+                    icon: GraduationCap,
+                    active: route().current("instructors.*"),
+                },
+                {
+                    label: "Répertoire des utilisateurs",
+                    route: "users.index",
+                    icon: Users,
+                    active: route().current("users.*"),
+                },
+            ],
+        },
+        {
+            group: "Contenu du site",
+            items: [
+                {
+                    label: "Galerie",
+                    route: "gallery-images.index",
+                    icon: Images,
+                    active: route().current("gallery-images.*"),
+                },
+                {
+                    label: "FAQ",
+                    route: "faqs.index",
+                    icon: CircleHelp,
+                    active: route().current("faqs.*"),
+                },
+            ],
+        },
+        {
+            group: "Atelier & Boutique",
+            items: [
+                {
+                    label: "Terres & Cuissons",
+                    icon: Flame,
+                    active: false,
+                    isUpcoming: true,
+                    badge: "Bientôt",
+                },
+                {
+                    label: "Boutique / Ventes",
+                    icon: ShoppingBag,
+                    active: false,
+                    isUpcoming: true,
+                    badge: "Bientôt",
+                },
+                {
+                    label: "Soldes & Fidélité",
+                    icon: Coins,
+                    active: false,
+                    isUpcoming: true,
+                    badge: "Bientôt",
+                },
+            ],
+        },
+    ];
+});
 const logout = () => {
     router.post(route("logout"));
 };
