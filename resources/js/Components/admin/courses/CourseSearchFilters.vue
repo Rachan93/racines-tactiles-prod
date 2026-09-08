@@ -263,7 +263,7 @@ onUnmounted(() => {
                                 @update:model-value="(val) => toggleTempTarget('student', val)"
                             />
                             <Label for="target_student" class="text-xs cursor-pointer select-none font-medium">
-                                Élève / Participant inscrit
+                                Élève inscrit
                             </Label>
                         </div>
                     </div>

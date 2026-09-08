@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             AttendeeSeeder::class,
             ModuleSeeder::class,
+            StudioClosureSeeder::class,
         ]);
     }
 }

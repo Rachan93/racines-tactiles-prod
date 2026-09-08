@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('type')->default('school_holiday'); // 'school_holiday', 'studio_closure'
             $table->date('start_date');
             $table->date('end_date');
-            $table->foreignId('type_id')->nullable()->constrained('types')->nullOnDelete(); // null = s'applique à tous, ou [1, 2] pour des types spécifiques
+           
             $table->text('notes')->nullable();
             $table->timestamps();
         });

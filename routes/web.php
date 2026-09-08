@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\InstructorController;
-
+use App\Http\Controllers\Admin\StudioClosureController as AdminStudioClosureController;
 use App\Http\Controllers\Admin\CourseController as AdminCourseController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\LessonController as AdminLessonController;
@@ -202,6 +202,16 @@ Route::middleware([
 
     // Tableau de bord principal
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard.index');
+
+    // --- CONGÉS & FERMETURES ---
+    Route::get('/conges-fermetures', [AdminStudioClosureController::class, 'index'])
+        ->name('studio-closures.index');
+    Route::post('/conges-fermetures', [AdminStudioClosureController::class, 'store'])
+        ->name('studio-closures.store');
+    Route::patch('/conges-fermetures/{studioClosure}', [AdminStudioClosureController::class, 'update'])
+        ->name('studio-closures.update');
+    Route::delete('/conges-fermetures/{studioClosure}', [AdminStudioClosureController::class, 'destroy'])
+        ->name('studio-closures.destroy');
 
     // --- INSTRUCTEURS ---
     Route::get('/instructeurs', [InstructorController::class, 'index'])->name('instructors.index');

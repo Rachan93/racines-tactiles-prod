@@ -16,7 +16,6 @@ class StudioClosure extends Model
         'type',
         'start_date',
         'end_date',
-        'applies_to_course_types',
         'notes',
     ];
 
@@ -25,7 +24,6 @@ class StudioClosure extends Model
         return [
             'start_date' => 'date',
             'end_date' => 'date',
-            'applies_to_course_types' => 'array',
         ];
     }
 

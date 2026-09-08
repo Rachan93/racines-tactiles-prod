@@ -422,12 +422,11 @@ const vBioOverflow = {
                     </Breadcrumb>
 
                     <h2 class="mt-3 text-2xl font-semibold tracking-tight">
-                        Des savoir-faire, des visages.
+                        Gestion des instructeurs
                     </h2>
 
                     <p class="mt-2 text-sm text-muted-foreground">
-                        Gérez les titulaires et les intervenants externes depuis
-                        un même répertoire.
+                        Gérez les titulaires et les intervenants externes.
                     </p>
                 </div>
 
@@ -660,7 +659,7 @@ const vBioOverflow = {
                             v-if="isUsed(instructor)"
                             class="mt-2 text-xs text-muted-foreground"
                         >
-                            Suppression bloquée : fiche liée au planning.
+                            Suppression bloquée : instructeur assigné.
                         </p>
                     </div>
                 </article>

@@ -374,7 +374,7 @@ const clearCurrentSelection = () => {
 </script>
 
 <template>
-    <AdminLayout title="Répertoire des membres">
+    <AdminLayout title="Répertoire des utilisateurs">
         <div class="space-y-6 relative pb-20">
             <!-- ========================================================= -->
             <!-- 1. BREADCRUMBS & EN-TÊTE DE PAGE                          -->
@@ -385,16 +385,16 @@ const clearCurrentSelection = () => {
                         Tableau de bord
                     </Link>
                     <ChevronRight class="h-3.5 w-3.5 text-muted-foreground/60" />
-                    <span class="font-semibold text-foreground">Répertoire des membres</span>
+                    <span class="font-semibold text-foreground">Répertoire des utilisateurs</span>
                 </nav>
 
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <h2 class="text-2xl font-bold tracking-tight text-foreground">
-                            Répertoire des membres & invités
+                            Membres et invités
                         </h2>
                         <p class="text-sm text-muted-foreground">
-                            Consultez les fiches membres, suivez les inscriptions aux cours et communiquez par e-mail.
+                            Consultez les fiches des utilisateurs et et communiquez par e-mail.
                         </p>
                     </div>
 

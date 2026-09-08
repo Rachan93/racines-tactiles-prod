@@ -38,6 +38,7 @@ import {
     PanelLeftOpen,
     CircleHelp,
     LibraryBig,
+    CalendarX,
 } from "lucide-vue-next";
 defineProps({
     title: {
@@ -88,13 +89,19 @@ const navigationGroups = computed(() => [
                     route().current("lessons.*"),
             },
             {
+                label: "Congés & Fermetures",
+                route: "studio-closures.index",
+                icon: CalendarX,
+                active: route().current("studio-closures.*"),
+            },
+            {
                 label: "Instructeurs",
                 route: "instructors.index",
                 icon: GraduationCap,
                 active: route().current("instructors.*"),
             },
             {
-                label: "Membres & Invités",
+                label: "Répertoire des utilisateurs",
                 route: "users.index",
                 icon: Users,
                 active: route().current("users.*"),

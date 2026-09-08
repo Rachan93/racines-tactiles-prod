@@ -171,7 +171,7 @@ const executeDeleteCourse = () => {
 </script>
 
 <template>
-    <AdminLayout title="Gestion des cours & séances">
+    <AdminLayout title="Cours & Séances">
         <div class="space-y-6">
             <!-- ========================================================= -->
             <!-- 1. BREADCRUMB & EN-TÊTE DE LA PAGE                        -->
@@ -202,11 +202,10 @@ const executeDeleteCourse = () => {
                         <h2
                             class="text-2xl font-bold tracking-tight text-foreground"
                         >
-                            Catalogue des cours & Séances
+                           Gestion des cours et séances
                         </h2>
                         <p class="text-sm text-muted-foreground">
-                            Supervision du planning, des remplacements, des
-                            effectifs et des fiches descriptives.
+                         Consultez et créez des cours, gérez les séances et suivez les inscriptions des participants.
                         </p>
                     </div>
                     <div class="flex items-center gap-2">
