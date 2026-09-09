@@ -88,7 +88,7 @@ const librePlans = [
                                 pour le tournage. Nous accueillons les débutants
                                 comme les plus aguerris désirant découvrir
                                 d’autres techniques, ou perfectionner certains
-                                gestes. Les groupes sont constitués de 8
+                                gestes. Les groupes sont constitués de 10
                                 personnes maximum afin de favoriser un suivi
                                 individuel et personnalisé. Á travers ce module,
                                 nous parcourons le façonnage, les cuissons et

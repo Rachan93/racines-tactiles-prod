@@ -25,11 +25,14 @@ import CookieBanner from "@/Components/custom/CookieBanner.vue";
 const page = usePage();
 const currentUser = computed(() => page.props.auth?.user);
 const isAdmin = computed(() => Number(currentUser.value?.role_id) === 1);
+const currentPath = computed(() => page.url.split(/[?#]/)[0]);
 const isAteliersActive = computed(
-    () => page.url.split(/[?#]/)[0] === route("ateliers.index"),
+    () =>
+        currentPath.value === "/ateliers" ||
+        currentPath.value.startsWith("/ateliers/"),
 );
 const isGalleryActive = computed(() =>
-    page.url.split(/[?#]/)[0].startsWith("/galerie"),
+    currentPath.value.startsWith("/galerie"),
 );
 const mobileMenuOpen = ref(false);
 const logout = () => {
@@ -118,6 +121,19 @@ const logout = () => {
                                     class="cursor-pointer py-2 text-xs sm:text-sm"
                                 >
                                     Cours privé
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem as-child>
+                                <Link
+                                    :href="`${route('ateliers.index')}#libre`"
+                                    class="flex w-full cursor-pointer items-center gap-2 py-2 text-xs sm:text-sm"
+                                >
+                                    <span>Atelier libre</span>
+                                    <span
+                                        class="shrink-0 rounded-full bg-blue-500 px-2 py-0.5 text-[10px] font-semibold leading-none text-white"
+                                    >
+                                        Nouveau
+                                    </span>
                                 </Link>
                             </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -312,21 +328,43 @@ const logout = () => {
             <div class="space-y-1">
                 <Link
                     :href="route('ateliers.index')"
-                    class="block px-3 py-2 rounded-lg text-base font-medium text-gray-800 hover:bg-gray-50"
+                    :aria-current="isAteliersActive ? 'page' : undefined"
+                    class="block rounded-lg px-3 py-2 text-base font-medium"
+                    :class="
+                        isAteliersActive
+                            ? 'bg-gray-100 font-semibold text-gray-900'
+                            : 'text-gray-800 hover:bg-gray-50'
+                    "
                     @click="mobileMenuOpen = false"
                 >
                     Ateliers
                 </Link>
                 <Link
                     href="/stages"
-                    class="block px-3 py-2 rounded-lg text-base font-medium text-gray-800 hover:bg-gray-50"
+                    :aria-current="
+                        $page.url.startsWith('/stages') ? 'page' : undefined
+                    "
+                    class="block rounded-lg px-3 py-2 text-base font-medium"
+                    :class="
+                        $page.url.startsWith('/stages')
+                            ? 'bg-gray-100 font-semibold text-gray-900'
+                            : 'text-gray-800 hover:bg-gray-50'
+                    "
                     @click="mobileMenuOpen = false"
                 >
                     Stages
                 </Link>
                 <Link
                     :href="route('calendrier.index')"
-                    class="block px-3 py-2 rounded-lg text-base font-medium text-gray-800 hover:bg-gray-50 flex items-center justify-between"
+                    :aria-current="
+                        $page.url.startsWith('/calendrier') ? 'page' : undefined
+                    "
+                    class="block rounded-lg px-3 py-2 text-base font-medium"
+                    :class="
+                        $page.url.startsWith('/calendrier')
+                            ? 'bg-gray-100 font-semibold text-gray-900'
+                            : 'text-gray-800 hover:bg-gray-50'
+                    "
                     @click="mobileMenuOpen = false"
                 >
                     <span>Calendrier</span>
@@ -346,14 +384,30 @@ const logout = () => {
                 </Link>
                 <Link
                     href="/faq"
-                    class="block px-3 py-2 rounded-lg text-base font-medium text-gray-800 hover:bg-gray-50"
+                    :aria-current="
+                        $page.url.startsWith('/faq') ? 'page' : undefined
+                    "
+                    class="block rounded-lg px-3 py-2 text-base font-medium"
+                    :class="
+                        $page.url.startsWith('/faq')
+                            ? 'bg-gray-100 font-semibold text-gray-900'
+                            : 'text-gray-800 hover:bg-gray-50'
+                    "
                     @click="mobileMenuOpen = false"
                 >
                     FAQ
                 </Link>
                 <Link
                     :href="route('contact.index')"
-                    class="block px-3 py-2 rounded-lg text-base font-medium text-earth-header hover:bg-earth-light"
+                    :aria-current="
+                        $page.url.startsWith('/contact') ? 'page' : undefined
+                    "
+                    class="block rounded-lg px-3 py-2 text-base font-medium"
+                    :class="
+                        $page.url.startsWith('/contact')
+                            ? 'bg-earth-light font-semibold text-earth-header'
+                            : 'text-earth-header hover:bg-earth-light'
+                    "
                     @click="mobileMenuOpen = false"
                 >
                     Contact
