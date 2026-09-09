@@ -29,7 +29,8 @@ const currentPath = computed(() => page.url.split(/[?#]/)[0]);
 const isAteliersActive = computed(
     () =>
         currentPath.value === "/ateliers" ||
-        currentPath.value.startsWith("/ateliers/"),
+        currentPath.value.startsWith("/ateliers/") ||
+        route().current("ateliers.index"),
 );
 const isGalleryActive = computed(() =>
     currentPath.value.startsWith("/galerie"),
