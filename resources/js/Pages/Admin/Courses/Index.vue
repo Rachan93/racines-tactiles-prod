@@ -4,14 +4,12 @@ import { Link, router } from "@inertiajs/vue3";
 import { pluralize } from "@/Utils/formatters";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 
-// Composants factorisés
 import CourseSearchFilters from "@/Components/admin/courses/CourseSearchFilters.vue";
 import CourseAccordionItem from "@/Components/admin/courses/CourseAccordionItem.vue";
 import CourseEditModal from "@/Components/admin/courses/CourseEditModal.vue";
 import LessonEditSheet from "@/Components/admin/courses/LessonEditSheet.vue";
 import LessonAttendeesModal from "@/Components/admin/courses/LessonAttendeesModal.vue";
 
-// Composants Shadcn UI
 import { Accordion } from "@/Components/ui/accordion";
 import { Button } from "@/Components/ui/button";
 import { Checkbox } from "@/Components/ui/checkbox";
@@ -66,7 +64,6 @@ const props = defineProps({
     },
 });
 
-// 1. Application des filtres
 const handleApplyFilters = (newFilters) => {
     router.get(
         route("courses.index"),
@@ -86,7 +83,6 @@ const handleApplyFilters = (newFilters) => {
     );
 };
 
-// 2. Gestion du tri au-dessus de la liste
 const handleSortChange = (newSort) => {
     router.get(
         route("courses.index"),
@@ -106,7 +102,6 @@ const handleSortChange = (newSort) => {
     );
 };
 
-// 3. Modale d'édition du cours parent
 const isCourseModalOpen = ref(false);
 const selectedCourseForEdit = ref(null);
 
@@ -115,7 +110,6 @@ const handleEditCourse = (course) => {
     isCourseModalOpen.value = true;
 };
 
-// 4. Tiroir latéral d'édition de séance
 const isLessonSheetOpen = ref(false);
 const selectedLesson = ref(null);
 const selectedCourseForLesson = ref(null);
@@ -126,7 +120,6 @@ const handleEditLesson = ({ lesson, course }) => {
     isLessonSheetOpen.value = true;
 };
 
-// 5. Modale de visualisation des participants (icône 👁️)
 const isAttendeesModalOpen = ref(false);
 const selectedLessonForAttendees = ref(null);
 const selectedCourseForAttendees = ref(null);
@@ -137,7 +130,6 @@ const handleViewAttendees = ({ lesson, course }) => {
     isAttendeesModalOpen.value = true;
 };
 
-// 6. Dialogue de confirmation de suppression d'un cours avec case à cocher
 const isDeleteDialogOpen = ref(false);
 const courseToDelete = ref(null);
 const isConfirmDeleteChecked = ref(false);

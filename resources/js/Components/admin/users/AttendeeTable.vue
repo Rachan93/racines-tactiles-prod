@@ -243,9 +243,20 @@ const copyText = async (text, label, key) => {
         <!-- Barre supérieure : Compteur & Sélecteur de colonnes -->
         <div class="flex items-center justify-between gap-2">
             <div>
-                <span v-if="selectedIds.length > 0" class="text-xs text-muted-foreground font-medium">
-                    <strong>{{ selectedIds.length }}</strong> {{ pluralize(selectedIds.length, 'invité') }} coché(s) sur cette page
-                </span>
+                <span
+    v-if="selectAllMatching || selectedIds.length > 0"
+    class="text-xs text-muted-foreground font-medium"
+>
+    <template v-if="selectAllMatching">
+        {{ pagination.total }} invité{{ pagination.total > 1 ? 's' : '' }} sélectionné{{ pagination.total > 1 ? 's' : '' }} au total
+    </template>
+
+    <template v-else>
+        {{ selectedIds.length }} invité{{ selectedIds.length > 1 ? 's' : '' }}
+        sélectionné{{ selectedIds.length > 1 ? 's' : '' }}
+        sur {{ attendees.length === 1 ? 'le seul résultat' : `les ${attendees.length} résultats` }} de cette page
+    </template>
+</span>
             </div>
 
             <!-- Menu Engrenage Colonnes avec coche "v" à gauche -->
@@ -534,7 +545,10 @@ const copyText = async (text, label, key) => {
                         <SelectItem value="100" class="text-xs cursor-pointer">100</SelectItem>
                     </SelectContent>
                 </Select>
-                <span>par page · <strong>{{ pagination.total }}</strong> résultat(s)</span>
+                 <span
+                    >par page ·
+                    <strong>{{pluralize(pagination.total, 'résultat')}}</strong>
+                </span>
             </div>
 
             <!-- Boutons de pagination -->

@@ -13,11 +13,10 @@ return new class extends Migration
     {
         Schema::create('studio_closures', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); // Ex: "Vacances de Toussaint", "Fermeture annuelle d'été"
-            $table->string('type')->default('school_holiday'); // 'school_holiday', 'studio_closure'
+            $table->string('name');
+            $table->enum('type', ['school_holiday', 'studio_closure'])->default('school_holiday');
             $table->date('start_date');
             $table->date('end_date');
-           
             $table->text('notes')->nullable();
             $table->timestamps();
         });

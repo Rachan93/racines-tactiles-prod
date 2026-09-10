@@ -5,16 +5,15 @@ import { toast } from "vue-sonner";
 import { pluralize } from "@/Utils/formatters";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 
-// Composants du répertoire
 import UserSearchFilters from "@/Components/admin/users/UserSearchFilters.vue";
 import UserTable from "@/Components/admin/users/UserTable.vue";
 import AttendeeTable from "@/Components/admin/users/AttendeeTable.vue";
 import UserEmailSheet from "@/Components/admin/users/UserEmailSheet.vue";
 
-// Composants Shadcn UI
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/Components/ui/tabs";
 import { Button } from "@/Components/ui/button";
 import { Badge } from "@/Components/ui/badge";
+import { Checkbox } from "@/Components/ui/checkbox";
 import {
     Dialog,
     DialogContent,
@@ -25,8 +24,8 @@ import {
 } from "@/Components/ui/dialog";
 import {
     ChevronRight,
+    User,
     Users,
-    UserCheck,
     Download,
     Mail,
     Trash2,
@@ -62,17 +61,14 @@ const props = defineProps({
     },
 });
 
-// Onglet actif ('users' | 'attendees')
 const activeTab = ref(props.filters.tab || "users");
 
-// 1. SÉLECTION MULTI-PAGES PERSISTANTE
 const selectedUserIds = ref([]);
 const selectAllMatchingUsers = ref(false);
 
 const selectedAttendeeIds = ref([]);
 const selectAllMatchingAttendees = ref(false);
 
-// Handlers dédiés pour garantir la réactivité .value
 const handleUpdateSelectedUserIds = (ids) => {
     selectedUserIds.value = (ids || []).map(Number);
 };
@@ -89,23 +85,33 @@ const handleUpdateSelectAllMatchingAttendees = (val) => {
     selectAllMatchingAttendees.value = Boolean(val);
 };
 
-// Nombre effectif d'éléments sélectionnés
 const selectedCount = computed(() => {
     if (activeTab.value === "users") {
-        return selectAllMatchingUsers.value ? Number(props.usersPagination.total) : selectedUserIds.value.length;
+        return selectAllMatchingUsers.value
+            ? Number(props.usersPagination.total)
+            : selectedUserIds.value.length;
     }
-    return selectAllMatchingAttendees.value ? Number(props.attendeesPagination.total) : selectedAttendeeIds.value.length;
+    return selectAllMatchingAttendees.value
+        ? Number(props.attendeesPagination.total)
+        : selectedAttendeeIds.value.length;
 });
 
-// Libellé dynamique du bouton CSV principal
 const csvExportButtonText = computed(() => {
     if (activeTab.value === "users") {
-        return `Exporter les ${pluralize(props.usersPagination.total, "membre")} en CSV`;
+        const total = props.usersPagination.total;
+
+        return total === 1
+            ? "Exporter le membre en CSV"
+            : `Exporter les ${pluralize(total, "membre")} en CSV`;
     }
-    return `Exporter les ${pluralize(props.attendeesPagination.total, "invité")} en CSV`;
+
+    const total = props.attendeesPagination.total;
+
+    return total === 1
+        ? "Exporter l’invité en CSV"
+        : `Exporter les ${pluralize(total, "invité")} en CSV`;
 });
 
-// Navigation avec conservation des paramètres
 const navigateWithFilters = (customParams = {}) => {
     const merged = { ...props.filters, ...customParams };
     router.get(route("users.index"), merged, {
@@ -115,7 +121,6 @@ const navigateWithFilters = (customParams = {}) => {
     });
 };
 
-// Basculement d'onglet avec synchronisation intégrale des filtres
 const handleTabChange = (newTab) => {
     activeTab.value = newTab;
     const fromP = newTab === "attendees" ? "users_" : "attendees_";
@@ -125,28 +130,39 @@ const handleTabChange = (newTab) => {
 
     params[`${toP}search`] = props.filters[`${fromP}search`] || "";
     params[`${toP}course_id`] = props.filters[`${fromP}course_id`] || "";
-    params[`${toP}module_status`] = props.filters[`${fromP}module_status`] || "all";
+    params[`${toP}module_status`] =
+        props.filters[`${fromP}module_status`] || "all";
 
-    params[`${toP}lesson_date_operator`] = props.filters[`${fromP}lesson_date_operator`] || "";
+    params[`${toP}lesson_date_operator`] =
+        props.filters[`${fromP}lesson_date_operator`] || "";
     params[`${toP}lesson_date`] = props.filters[`${fromP}lesson_date`] || "";
-    params[`${toP}lesson_date_end`] = props.filters[`${fromP}lesson_date_end`] || "";
+    params[`${toP}lesson_date_end`] =
+        props.filters[`${fromP}lesson_date_end`] || "";
 
-    params[`${toP}created_at_operator`] = props.filters[`${fromP}created_at_operator`] || "";
-    params[`${toP}created_at_date`] = props.filters[`${fromP}created_at_date`] || "";
-    params[`${toP}created_at_date_end`] = props.filters[`${fromP}created_at_date_end`] || "";
+    params[`${toP}created_at_operator`] =
+        props.filters[`${fromP}created_at_operator`] || "";
+    params[`${toP}created_at_date`] =
+        props.filters[`${fromP}created_at_date`] || "";
+    params[`${toP}created_at_date_end`] =
+        props.filters[`${fromP}created_at_date_end`] || "";
 
-    params[`${toP}birthday_operator`] = props.filters[`${fromP}birthday_operator`] || "";
+    params[`${toP}birthday_operator`] =
+        props.filters[`${fromP}birthday_operator`] || "";
     params[`${toP}birthday_day`] = props.filters[`${fromP}birthday_day`] || "";
-    params[`${toP}birthday_month`] = props.filters[`${fromP}birthday_month`] || "";
-    params[`${toP}birthday_year`] = props.filters[`${fromP}birthday_year`] || "";
-    params[`${toP}birthday_end_day`] = props.filters[`${fromP}birthday_end_day`] || "";
-    params[`${toP}birthday_end_month`] = props.filters[`${fromP}birthday_end_month`] || "";
-    params[`${toP}birthday_end_year`] = props.filters[`${fromP}birthday_end_year`] || "";
+    params[`${toP}birthday_month`] =
+        props.filters[`${fromP}birthday_month`] || "";
+    params[`${toP}birthday_year`] =
+        props.filters[`${fromP}birthday_year`] || "";
+    params[`${toP}birthday_end_day`] =
+        props.filters[`${fromP}birthday_end_day`] || "";
+    params[`${toP}birthday_end_month`] =
+        props.filters[`${fromP}birthday_end_month`] || "";
+    params[`${toP}birthday_end_year`] =
+        props.filters[`${fromP}birthday_end_year`] || "";
 
     navigateWithFilters(params);
 };
 
-// Application des filtres avec miroir automatique sur les 2 onglets
 const handleApplyFilters = (newFilters) => {
     const currentP = activeTab.value === "users" ? "users_" : "attendees_";
     const mirrorP = activeTab.value === "users" ? "attendees_" : "users_";
@@ -155,26 +171,40 @@ const handleApplyFilters = (newFilters) => {
     newFilters[`${mirrorP}page`] = 1;
 
     newFilters[`${mirrorP}search`] = newFilters[`${currentP}search`] || "";
-    newFilters[`${mirrorP}course_id`] = newFilters[`${currentP}course_id`] || "";
-    newFilters[`${mirrorP}module_status`] = newFilters[`${currentP}module_status`] || "all";
-    newFilters[`${mirrorP}lesson_date_operator`] = newFilters[`${currentP}lesson_date_operator`] || "";
-    newFilters[`${mirrorP}lesson_date`] = newFilters[`${currentP}lesson_date`] || "";
-    newFilters[`${mirrorP}lesson_date_end`] = newFilters[`${currentP}lesson_date_end`] || "";
-    newFilters[`${mirrorP}created_at_operator`] = newFilters[`${currentP}created_at_operator`] || "";
-    newFilters[`${mirrorP}created_at_date`] = newFilters[`${currentP}created_at_date`] || "";
-    newFilters[`${mirrorP}created_at_date_end`] = newFilters[`${currentP}created_at_date_end`] || "";
-    newFilters[`${mirrorP}birthday_operator`] = newFilters[`${currentP}birthday_operator`] || "";
-    newFilters[`${mirrorP}birthday_day`] = newFilters[`${currentP}birthday_day`] || "";
-    newFilters[`${mirrorP}birthday_month`] = newFilters[`${currentP}birthday_month`] || "";
-    newFilters[`${mirrorP}birthday_year`] = newFilters[`${currentP}birthday_year`] || "";
-    newFilters[`${mirrorP}birthday_end_day`] = newFilters[`${currentP}birthday_end_day`] || "";
-    newFilters[`${mirrorP}birthday_end_month`] = newFilters[`${currentP}birthday_end_month`] || "";
-    newFilters[`${mirrorP}birthday_end_year`] = newFilters[`${currentP}birthday_end_year`] || "";
+    newFilters[`${mirrorP}course_id`] =
+        newFilters[`${currentP}course_id`] || "";
+    newFilters[`${mirrorP}module_status`] =
+        newFilters[`${currentP}module_status`] || "all";
+    newFilters[`${mirrorP}lesson_date_operator`] =
+        newFilters[`${currentP}lesson_date_operator`] || "";
+    newFilters[`${mirrorP}lesson_date`] =
+        newFilters[`${currentP}lesson_date`] || "";
+    newFilters[`${mirrorP}lesson_date_end`] =
+        newFilters[`${currentP}lesson_date_end`] || "";
+    newFilters[`${mirrorP}created_at_operator`] =
+        newFilters[`${currentP}created_at_operator`] || "";
+    newFilters[`${mirrorP}created_at_date`] =
+        newFilters[`${currentP}created_at_date`] || "";
+    newFilters[`${mirrorP}created_at_date_end`] =
+        newFilters[`${currentP}created_at_date_end`] || "";
+    newFilters[`${mirrorP}birthday_operator`] =
+        newFilters[`${currentP}birthday_operator`] || "";
+    newFilters[`${mirrorP}birthday_day`] =
+        newFilters[`${currentP}birthday_day`] || "";
+    newFilters[`${mirrorP}birthday_month`] =
+        newFilters[`${currentP}birthday_month`] || "";
+    newFilters[`${mirrorP}birthday_year`] =
+        newFilters[`${currentP}birthday_year`] || "";
+    newFilters[`${mirrorP}birthday_end_day`] =
+        newFilters[`${currentP}birthday_end_day`] || "";
+    newFilters[`${mirrorP}birthday_end_month`] =
+        newFilters[`${currentP}birthday_end_month`] || "";
+    newFilters[`${mirrorP}birthday_end_year`] =
+        newFilters[`${currentP}birthday_end_year`] || "";
 
     navigateWithFilters(newFilters);
 };
 
-// Réinitialisation simultanée des 2 onglets
 const handleResetFilters = () => {
     selectedUserIds.value = [];
     selectAllMatchingUsers.value = false;
@@ -185,7 +215,12 @@ const handleResetFilters = () => {
         tab: activeTab.value,
         users_page: 1,
         users_search: "",
-        users_search_filters: ["last_name", "first_name", "email", "phone_number"],
+        users_search_filters: [
+            "last_name",
+            "first_name",
+            "email",
+            "phone_number",
+        ],
         users_course_id: "",
         users_module_status: "all",
         users_lesson_date_operator: "",
@@ -223,25 +258,38 @@ const handleResetFilters = () => {
     });
 };
 
-// Pagination & Tri Membres
-const handleUserPageChange = (page) => navigateWithFilters({ users_page: page });
-const handleUserPerPageChange = (perPage) => navigateWithFilters({ users_perPage: perPage, users_page: 1 });
+const handleUserPageChange = (page) =>
+    navigateWithFilters({ users_page: page });
+const handleUserPerPageChange = (perPage) =>
+    navigateWithFilters({ users_perPage: perPage, users_page: 1 });
 const handleUserSortChange = ({ field, direction }) => {
-    navigateWithFilters({ users_sortField: field, users_sortDirection: direction, users_page: 1 });
+    navigateWithFilters({
+        users_sortField: field,
+        users_sortDirection: direction,
+        users_page: 1,
+    });
 };
 
-// Pagination & Tri Invités
-const handleAttendeePageChange = (page) => navigateWithFilters({ attendees_page: page });
-const handleAttendeePerPageChange = (perPage) => navigateWithFilters({ attendees_perPage: perPage, attendees_page: 1 });
+const handleAttendeePageChange = (page) =>
+    navigateWithFilters({ attendees_page: page });
+const handleAttendeePerPageChange = (perPage) =>
+    navigateWithFilters({ attendees_perPage: perPage, attendees_page: 1 });
 const handleAttendeeSortChange = ({ field, direction }) => {
-    navigateWithFilters({ attendees_sortField: field, attendees_sortDirection: direction, attendees_page: 1 });
+    navigateWithFilters({
+        attendees_sortField: field,
+        attendees_sortDirection: direction,
+        attendees_page: 1,
+    });
 };
 
-// 2. EXPORT CSV STREAMING
 const handleExportCsv = () => {
     const isUsers = activeTab.value === "users";
-    const selected = isUsers ? selectedUserIds.value : selectedAttendeeIds.value;
-    const selectAll = isUsers ? selectAllMatchingUsers.value : selectAllMatchingAttendees.value;
+    const selected = isUsers
+        ? selectedUserIds.value
+        : selectedAttendeeIds.value;
+    const selectAll = isUsers
+        ? selectAllMatchingUsers.value
+        : selectAllMatchingAttendees.value;
 
     const url = new URL(route("users.export-csv"), window.location.origin);
     url.searchParams.set("type", activeTab.value);
@@ -261,7 +309,6 @@ const handleExportCsv = () => {
     toast.success("Export CSV démarré");
 };
 
-// 3. TIROIR D'E-MAILS GROUPÉS
 const isEmailSheetOpen = ref(false);
 const emailRecipients = ref([]);
 
@@ -272,15 +319,17 @@ const handleOpenEmptyEmailSheet = () => {
 };
 
 const handleEmailSingleUser = (user) => {
-    emailRecipients.value = [{
-        id: user.id,
-        full_name: user.full_name,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        phone_number: user.phone_number,
-        is_custom: false,
-    }];
+    emailRecipients.value = [
+        {
+            id: user.id,
+            full_name: user.full_name,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            email: user.email,
+            phone_number: user.phone_number,
+            is_custom: false,
+        },
+    ];
     isEmailSheetOpen.value = true;
 };
 
@@ -299,7 +348,9 @@ const handleOpenBulkEmail = () => {
         }));
     } else {
         emailRecipients.value = props.users
-            .filter((u) => selectedUserIds.value.map(Number).includes(Number(u.id)))
+            .filter((u) =>
+                selectedUserIds.value.map(Number).includes(Number(u.id)),
+            )
             .map((u) => ({
                 id: u.id,
                 full_name: u.full_name,
@@ -314,24 +365,49 @@ const handleOpenBulkEmail = () => {
     isEmailSheetOpen.value = true;
 };
 
-// 4. SUPPRESSION GROUPÉE
 const isDeleteDialogOpen = ref(false);
 const isDeleting = ref(false);
 const deleteTarget = ref({ type: "users", ids: [], singleName: null });
 
 const handlePromptDeleteUser = (user) => {
-    deleteTarget.value = { type: "users", ids: [user.id], singleName: user.full_name };
+    deleteTarget.value = {
+        type: "users",
+        ids: [user.id],
+        singleName: user.full_name,
+    };
     isDeleteDialogOpen.value = true;
 };
 
 const handlePromptDeleteAttendee = (att) => {
-    deleteTarget.value = { type: "attendees", ids: [att.id], singleName: att.full_name };
+    deleteTarget.value = {
+        type: "attendees",
+        ids: [att.id],
+        singleName: att.full_name,
+    };
     isDeleteDialogOpen.value = true;
 };
 
 const handlePromptBulkDelete = () => {
-    const ids = activeTab.value === "users" ? selectedUserIds.value : selectedAttendeeIds.value;
-    deleteTarget.value = { type: activeTab.value, ids, singleName: null };
+    const isUsers = activeTab.value === "users";
+
+    const ids = isUsers ? selectedUserIds.value : selectedAttendeeIds.value;
+
+    let singleName = null;
+
+    if (ids.length === 1) {
+        const items = isUsers ? props.users : props.attendees;
+
+        const item = items.find((item) => Number(item.id) === Number(ids[0]));
+
+        singleName = item?.full_name || null;
+    }
+
+    deleteTarget.value = {
+        type: activeTab.value,
+        ids,
+        singleName,
+    };
+
     isDeleteDialogOpen.value = true;
 };
 
@@ -346,15 +422,42 @@ const executeDelete = () => {
         },
         preserveScroll: true,
         onSuccess: () => {
+            const deletedCount = deleteTarget.value.ids.length;
+            const deletedName = deleteTarget.value.singleName;
+
             isDeleteDialogOpen.value = false;
+
             if (deleteTarget.value.type === "users") {
-                selectedUserIds.value = selectedUserIds.value.filter((id) => !deleteTarget.value.ids.map(Number).includes(Number(id)));
+                selectedUserIds.value = selectedUserIds.value.filter(
+                    (id) =>
+                        !deleteTarget.value.ids
+                            .map(Number)
+                            .includes(Number(id)),
+                );
+
                 selectAllMatchingUsers.value = false;
+
+                toast.success(
+                    deletedCount === 1 && deletedName
+                        ? `Suppression de ${deletedName} validée`
+                        : `Suppression des ${deletedCount} membres validée`,
+                );
             } else {
-                selectedAttendeeIds.value = selectedAttendeeIds.value.filter((id) => !deleteTarget.value.ids.map(Number).includes(Number(id)));
+                selectedAttendeeIds.value = selectedAttendeeIds.value.filter(
+                    (id) =>
+                        !deleteTarget.value.ids
+                            .map(Number)
+                            .includes(Number(id)),
+                );
+
                 selectAllMatchingAttendees.value = false;
+
+                toast.success(
+                    deletedCount === 1 && deletedName
+                        ? `Suppression de ${deletedName} validée`
+                        : `Suppression des ${deletedCount} invités validée`,
+                );
             }
-            toast.success("Suppression validée");
         },
         onFinish: () => {
             isDeleting.value = false;
@@ -371,6 +474,8 @@ const clearCurrentSelection = () => {
         selectAllMatchingAttendees.value = false;
     }
 };
+
+const deleteConfirmed = ref(false);
 </script>
 
 <template>
@@ -380,37 +485,40 @@ const clearCurrentSelection = () => {
             <!-- 1. BREADCRUMBS & EN-TÊTE DE PAGE                          -->
             <!-- ========================================================= -->
             <div class="space-y-3">
-                <nav class="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Link :href="route('dashboard.index')" class="hover:text-foreground transition-colors">
+                <nav
+                    class="flex items-center gap-1.5 text-xs text-muted-foreground"
+                >
+                    <Link
+                        :href="route('dashboard.index')"
+                        class="hover:text-foreground transition-colors"
+                    >
                         Tableau de bord
                     </Link>
-                    <ChevronRight class="h-3.5 w-3.5 text-muted-foreground/60" />
-                    <span class="font-semibold text-foreground">Répertoire des utilisateurs</span>
+                    <ChevronRight
+                        class="h-3.5 w-3.5 text-muted-foreground/60"
+                    />
+                    <span class="font-semibold text-foreground"
+                        >Répertoire des utilisateurs</span
+                    >
                 </nav>
 
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div
+                    class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                >
                     <div>
-                        <h2 class="text-2xl font-bold tracking-tight text-foreground">
+                        <h2
+                            class="text-2xl font-bold tracking-tight text-foreground"
+                        >
                             Membres et invités
                         </h2>
                         <p class="text-sm text-muted-foreground">
-                            Consultez les fiches des utilisateurs et et communiquez par e-mail.
+                            Consultez les fiches des utilisateurs et et
+                            communiquez par e-mail.
                         </p>
                     </div>
 
                     <!-- Actions globales en haut à droite -->
                     <div class="flex items-center gap-2 flex-wrap">
-                        <Button
-                            variant="default"
-                            size="sm"
-                            class="gap-1.5 shadow-2xs text-xs font-semibold cursor-pointer"
-                            @click="handleOpenEmptyEmailSheet"
-                        >
-                            <Mail class="h-3.5 w-3.5" />
-                            <span>Rédiger un e-mail</span>
-                        </Button>
-
-                        <!-- Bouton CSV dynamique -->
                         <Button
                             variant="outline"
                             size="sm"
@@ -420,6 +528,15 @@ const clearCurrentSelection = () => {
                             <Download class="h-3.5 w-3.5" />
                             <span>{{ csvExportButtonText }}</span>
                         </Button>
+                        <Button
+                            variant="default"
+                            size="sm"
+                            class="gap-1.5 shadow-2xs text-xs font-semibold cursor-pointer"
+                            @click="handleOpenEmptyEmailSheet"
+                        >
+                            <Mail class="h-3.5 w-3.5" />
+                            <span>Rédiger un e-mail</span>
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -427,22 +544,46 @@ const clearCurrentSelection = () => {
             <!-- ========================================================= -->
             <!-- 2. ONGLETS MEMBRES / INVITÉS                              -->
             <!-- ========================================================= -->
-            <Tabs :model-value="activeTab" class="w-full space-y-4" @update:model-value="handleTabChange">
-                <TabsList class="grid w-full sm:w-auto grid-cols-2 sm:inline-flex h-9 bg-muted/60 p-1">
-                    <TabsTrigger value="users" class="text-xs gap-1.5 px-4 font-semibold cursor-pointer">
-                        <Users class="h-3.5 w-3.5" />
+            <Tabs
+                :model-value="activeTab"
+                class="w-full space-y-4"
+                @update:model-value="handleTabChange"
+            >
+                <TabsList
+                    class="grid h-auto w-full grid-cols-2 justify-start rounded-none border-b border-border bg-transparent p-0 sm:flex sm:w-auto"
+                >
+                    <TabsTrigger
+                        value="users"
+                        class="group relative gap-2 rounded-none border-b-2 border-transparent bg-transparent px-4 py-3 text-sm font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                    >
+                        <User
+                            class="h-4 w-4 transition-colors group-data-[state=active]:text-primary"
+                        />
+
                         <span>Membres</span>
-                        <Badge variant="secondary" class="text-[10px] px-1.5 py-0 rounded-full font-normal">
+
+                        <span
+                            class="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-none text-muted-foreground transition-colors group-data-[state=active]:bg-primary/10 group-data-[state=active]:text-primary"
+                        >
                             {{ usersPagination.total }}
-                        </Badge>
+                        </span>
                     </TabsTrigger>
 
-                    <TabsTrigger value="attendees" class="text-xs gap-1.5 px-4 font-semibold cursor-pointer">
-                        <UserCheck class="h-3.5 w-3.5" />
+                    <TabsTrigger
+                        value="attendees"
+                        class="group relative gap-2 rounded-none border-b-2 border-transparent bg-transparent px-4 py-3 text-sm font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                    >
+                        <Users
+                            class="h-4 w-4 transition-colors group-data-[state=active]:text-primary"
+                        />
+
                         <span>Invités</span>
-                        <Badge variant="secondary" class="text-[10px] px-1.5 py-0 rounded-full font-normal">
+
+                        <span
+                            class="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-none text-muted-foreground transition-colors group-data-[state=active]:bg-primary/10 group-data-[state=active]:text-primary"
+                        >
                             {{ attendeesPagination.total }}
-                        </Badge>
+                        </span>
                     </TabsTrigger>
                 </TabsList>
 
@@ -464,13 +605,20 @@ const clearCurrentSelection = () => {
                     <UserTable
                         :users="users"
                         :pagination="usersPagination"
-                        :sorting="{ field: filters.users_sortField || 'last_name', direction: filters.users_sortDirection || 'asc' }"
+                        :sorting="{
+                            field: filters.users_sortField || 'last_name',
+                            direction: filters.users_sortDirection || 'asc',
+                        }"
                         :selected-ids="selectedUserIds"
                         :select-all-matching="selectAllMatchingUsers"
                         @update:selected-ids="handleUpdateSelectedUserIds"
                         @update:selectedIds="handleUpdateSelectedUserIds"
-                        @update:select-all-matching="handleUpdateSelectAllMatchingUsers"
-                        @update:selectAllMatching="handleUpdateSelectAllMatchingUsers"
+                        @update:select-all-matching="
+                            handleUpdateSelectAllMatchingUsers
+                        "
+                        @update:selectAllMatching="
+                            handleUpdateSelectAllMatchingUsers
+                        "
                         @sort-change="handleUserSortChange"
                         @page-change="handleUserPageChange"
                         @per-page-change="handleUserPerPageChange"
@@ -486,13 +634,20 @@ const clearCurrentSelection = () => {
                     <AttendeeTable
                         :attendees="attendees"
                         :pagination="attendeesPagination"
-                        :sorting="{ field: filters.attendees_sortField || 'last_name', direction: filters.attendees_sortDirection || 'asc' }"
+                        :sorting="{
+                            field: filters.attendees_sortField || 'last_name',
+                            direction: filters.attendees_sortDirection || 'asc',
+                        }"
                         :selected-ids="selectedAttendeeIds"
                         :select-all-matching="selectAllMatchingAttendees"
                         @update:selected-ids="handleUpdateSelectedAttendeeIds"
                         @update:selectedIds="handleUpdateSelectedAttendeeIds"
-                        @update:select-all-matching="handleUpdateSelectAllMatchingAttendees"
-                        @update:selectAllMatching="handleUpdateSelectAllMatchingAttendees"
+                        @update:select-all-matching="
+                            handleUpdateSelectAllMatchingAttendees
+                        "
+                        @update:selectAllMatching="
+                            handleUpdateSelectAllMatchingAttendees
+                        "
                         @sort-change="handleAttendeeSortChange"
                         @page-change="handleAttendeePageChange"
                         @per-page-change="handleAttendeePerPageChange"
@@ -516,24 +671,39 @@ const clearCurrentSelection = () => {
                     v-if="selectedCount > 0"
                     class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-foreground text-background dark:bg-card dark:text-card-foreground border border-border/80 shadow-2xl rounded-full px-4 py-2 flex items-center gap-3 text-xs font-medium"
                 >
-                    <div class="flex items-center gap-1.5 pl-1 border-r border-background/20 dark:border-border pr-3">
+                    <div
+                        class="flex items-center gap-1.5 pl-1 border-r border-background/20 dark:border-border pr-3"
+                    >
                         <span class="font-bold">
-                            {{ selectAllMatchingUsers || selectAllMatchingAttendees ? `Tous les ${selectedCount}` : selectedCount }}
+                            {{
+                                selectAllMatchingUsers ||
+                                selectAllMatchingAttendees
+                                    ? `Tous les ${pluralize(
+                                          selectedCount,
+                                          activeTab === "users"
+                                              ? "membre"
+                                              : "invité",
+                                      )}`
+                                    : pluralize(
+                                          selectedCount,
+                                          activeTab === "users"
+                                              ? "membre"
+                                              : "invité",
+                                      )
+                            }}
                         </span>
-                        <span>{{ pluralize(selectedCount, activeTab === 'users' ? 'membre' : 'invité') }}</span>
                     </div>
 
-                    <!-- Rédiger e-mail (Membres uniquement) -->
+                    <!-- Envoyer un e-mail (Membres uniquement) -->
                     <Button
                         v-if="activeTab === 'users'"
                         type="button"
                         size="sm"
-                        variant="secondary"
-                        class="h-7 text-xs gap-1.5 rounded-full px-3 shadow-xs cursor-pointer"
+                        class="h-7 text-xs gap-1.5 rounded-full px-3 shadow-xs cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
                         @click="handleOpenBulkEmail"
                     >
                         <Mail class="h-3 w-3" />
-                        <span>Rédiger un e-mail</span>
+                        <span>Envoyer un e-mail</span>
                     </Button>
 
                     <!-- Exporter CSV de la sélection -->
@@ -571,7 +741,6 @@ const clearCurrentSelection = () => {
                     </button>
                 </div>
             </transition>
-
             <!-- ========================================================= -->
             <!-- 7. TIROIR LATÉRAL D'E-MAIL GROUPÉ                        -->
             <!-- ========================================================= -->
@@ -587,26 +756,88 @@ const clearCurrentSelection = () => {
             <!-- ========================================================= -->
             <!-- 8. MODALE DE SUPPRESSION                                  -->
             <!-- ========================================================= -->
-            <Dialog :open="isDeleteDialogOpen" @update:open="(val) => (isDeleteDialogOpen = val)">
+            <Dialog
+                :open="isDeleteDialogOpen"
+                @update:open="
+                    (val) => {
+                        isDeleteDialogOpen = val;
+
+                        if (!val) {
+                            deleteConfirmed = false;
+                        }
+                    }
+                "
+            >
                 <DialogContent class="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle class="flex items-center gap-2 text-destructive">
+                        <DialogTitle
+                            class="flex items-center gap-2 text-destructive"
+                        >
                             <AlertTriangle class="h-5 w-5" />
                             <span>Confirmer la suppression</span>
                         </DialogTitle>
+
                         <DialogDescription class="text-xs pt-2">
                             <template v-if="deleteTarget.singleName">
-                                Êtes-vous sûr de vouloir supprimer définitivement
-                                <strong class="text-foreground">« {{ deleteTarget.singleName }} »</strong> ?
+                                Êtes-vous sûr de vouloir supprimer
+                                définitivement
+                                <strong class="text-foreground">
+                                    « {{ deleteTarget.singleName }} »
+                                </strong>
+                                ?
                             </template>
+
                             <template v-else>
-                                Êtes-vous sûr de vouloir supprimer définitivement les
-                                <strong class="text-foreground">{{ deleteTarget.ids.length }}</strong> éléments sélectionnés ?
+                                Êtes-vous sûr de vouloir supprimer
+                                définitivement
+                                <strong class="text-foreground">
+                                    {{
+                                        pluralize(
+                                            selectedCount,
+                                            activeTab === "users"
+                                                ? "membre"
+                                                : "invité",
+                                        )
+                                    }}
+                                </strong>
+                                sélectionné{{ selectedCount > 1 ? "s" : "" }} ?
                             </template>
+
                             Cette action est irréversible.
                         </DialogDescription>
                     </DialogHeader>
 
+                    <!-- Confirmation explicite -->
+                    <label
+                        class="flex items-start gap-2.5 rounded-lg border p-3 cursor-pointer select-none"
+                    >
+                        <Checkbox
+                            v-model="deleteConfirmed"
+                            class="mt-0.5 cursor-pointer"
+                        />
+
+                        <span class="text-xs leading-5 text-foreground">
+                            Je confirme vouloir supprimer définitivement
+                            <template v-if="deleteTarget.singleName">
+                                ce membre
+                            </template>
+
+                            <template v-else>
+                                les
+                                {{
+                                    pluralize(
+                                        selectedCount,
+                                        activeTab === "users"
+                                            ? "membre"
+                                            : "invité",
+                                    )
+                                }}
+                                sélectionné{{
+                                    selectedCount > 1 ? "s" : ""
+                                }} </template
+                            >.
+                        </span>
+                    </label>
                     <DialogFooter class="gap-2 sm:gap-0 pt-4">
                         <Button
                             type="button"
@@ -616,16 +847,21 @@ const clearCurrentSelection = () => {
                         >
                             Annuler
                         </Button>
+
                         <Button
                             type="button"
                             variant="destructive"
                             size="sm"
-                            :disabled="isDeleting"
-                            class="gap-1.5 font-semibold cursor-pointer"
+                            :disabled="isDeleting || !deleteConfirmed"
+                            class="gap-1.5 font-semibold cursor-pointer ml-2"
                             @click="executeDelete"
                         >
-                            <Loader2 v-if="isDeleting" class="h-4 w-4 animate-spin" />
+                            <Loader2
+                                v-if="isDeleting"
+                                class="h-4 w-4 animate-spin"
+                            />
                             <Trash2 v-else class="h-4 w-4" />
+
                             <span>Confirmer la suppression</span>
                         </Button>
                     </DialogFooter>

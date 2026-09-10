@@ -39,7 +39,6 @@ class LessonGeneratorService
             ->startOfDay();
 
         $frequency = max(1, (int) ($params['frequency'] ?? 7));
-        $typeId = $params['type_id'] ?? null;
         $countryCode = $params['country_code'] ?? 'BE';
 
         $excludePublicHolidays = filter_var(
@@ -73,13 +72,7 @@ class LessonGeneratorService
         }
 
         // 1. Récupération des fermetures en une seule requête.
-        $closures = StudioClosure::overlapping($firstDate, $endDate)
-            ->where(function ($query) use ($typeId) {
-                $query
-                    ->whereNull('type_id')
-                    ->orWhere('type_id', $typeId);
-            })
-            ->get();
+        $closures = StudioClosure::overlapping($firstDate, $endDate)->get();
 
         // 2. Initialisation des jours fériés pour le pays.
         $holidays = null;
