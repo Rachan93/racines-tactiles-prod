@@ -288,19 +288,10 @@ const logout = () => {
                     <template v-else>
                         <Link :href="route('login')">
                             <Button
-                                variant="ghost"
-                                size="sm"
-                                class="text-xs sm:text-sm text-gray-700 hover:text-gray-900"
-                            >
-                                Connexion
-                            </Button>
-                        </Link>
-                        <Link :href="route('register')">
-                            <Button
                                 size="sm"
                                 class="text-xs sm:text-sm bg-gray-900 hover:bg-gray-800 text-white font-medium h-9 shadow-xs"
                             >
-                                Inscription
+                                Connexion
                             </Button>
                         </Link>
                     </template>
@@ -463,15 +454,17 @@ const logout = () => {
                 <template v-else>
                     <div class="grid grid-cols-2 gap-2 pt-1">
                         <Link :href="route('login')" class="w-full">
-                            <Button variant="outline" class="w-full text-sm"
-                                >Connexion</Button
-                            >
-                        </Link>
-                        <Link :href="route('register')" class="w-full">
                             <Button
-                                class="w-full text-sm bg-gray-900 text-white"
-                                >Inscription</Button
+                                class="w-full text-sm bg-gray-900 hover:bg-gray-800 text-white"
                             >
+                                Connexion
+                            </Button>
+                        </Link>
+
+                        <Link :href="route('register')" class="w-full">
+                            <Button variant="outline" class="w-full text-sm">
+                                Inscription
+                            </Button>
                         </Link>
                     </div>
                 </template>

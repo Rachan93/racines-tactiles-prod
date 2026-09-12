@@ -9,6 +9,8 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
+use App\Notifications\Auth\VerifyEmailNotification;
+use App\Notifications\Auth\ResetPasswordNotification;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -89,9 +91,17 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(Attendee::class);
     }
-    
+
     public function modules()
     {
         return $this->morphMany(Module::class, 'participant');
+    }
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new VerifyEmailNotification());
+    }
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
     }
 }

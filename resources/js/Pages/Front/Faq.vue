@@ -144,46 +144,46 @@ defineProps({
             <!-- CONTACT                                               -->
             <!-- ===================================================== -->
 
-            <div
-                class="mt-12 rounded-2xl bg-gray-900 text-white p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-5"
-            >
-                <div>
-                    <div
-                        class="flex items-center gap-2"
-                    >
-                        <Mail
-                            class="h-4 w-4 text-gray-300"
-                        />
+ <aside
+    aria-labelledby="contact-cta-title"
+    class="!mt-24 flex flex-col justify-between gap-5 rounded-2xl bg-gray-900 p-6 text-white sm:flex-row sm:items-center sm:p-8"
+>
+    <div>
+        <h2
+            id="contact-cta-title"
+            class="flex items-center gap-2 text-lg font-semibold"
+        >
+            <Mail
+                class="h-4 w-4 shrink-0 text-gray-300"
+                aria-hidden="true"
+            />
 
-                        <h2
-                            class="font-semibold text-lg"
-                        >
-                            Vous n'avez pas trouvé votre réponse ?
-                        </h2>
-                    </div>
+            Vous n’avez pas trouvé votre réponse ?
+        </h2>
 
-                    <p
-                        class="text-sm text-gray-300 mt-2 max-w-xl"
-                    >
-                        Contactez-nous et nous vous répondrons
-                        directement.
-                    </p>
-                </div>
+        <p class="mt-2 max-w-xl text-sm text-gray-300">
+            Contactez-nous et nous vous répondrons directement.
+        </p>
+    </div>
 
-                <Button
-                    as-child
-                    size="sm"
-                    class="group bg-white text-gray-900 hover:bg-gray-100 shrink-0"
-                >
-                    <Link :href="route('contact.index')">
-                        Nous contacter
+    <Button
+        as-child
+        size="sm"
+        class="shrink-0 bg-white text-gray-900 hover:bg-gray-100"
+    >
+        <Link
+            :href="route('contact.index')"
+            class="group"
+        >
+            Nous contacter
 
-                        <ArrowRight
-                            class="h-4 w-4 ml-1.5 transition-transform group-hover:translate-x-1"
-                        />
-                    </Link>
-                </Button>
-            </div>
+            <ArrowRight
+                class="ml-1.5 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1"
+                aria-hidden="true"
+            />
+        </Link>
+    </Button>
+</aside>
         </section>
     </main>
 

@@ -1,14 +1,17 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import { Head, usePage, Link } from "@inertiajs/vue3";
+import { computed, onUnmounted, ref, watch } from "vue";
+import { Head, Link, usePage } from "@inertiajs/vue3";
 import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
 import frLocale from "@fullcalendar/core/locales/fr";
-
 import { useCalendarFilters } from "@/Composables/useCalendarFilters";
+import { useCalendarNavigation } from "@/Composables/useCalendarNavigation";
+import { calendarCapacityClass } from "@/Utils/calendarCapacity";
+import CalendarToolbar from "@/Components/calendar/CalendarToolbar.vue";
+import CalendarEventContent from "@/Components/calendar/CalendarEventContent.vue";
 import LessonDetailModal from "@/Components/calendar/LessonDetailModal.vue";
 import BookingConfirmationModal from "@/Components/calendar/BookingConfirmationModal.vue";
 import Nav from "@/Components/custom/Nav.vue";
@@ -16,14 +19,12 @@ import Footer from "@/Components/custom/Footer.vue";
 import { Button } from "@/Components/ui/button";
 import { Switch } from "@/Components/ui/switch";
 import { Label } from "@/Components/ui/label";
-import { Badge } from "@/Components/ui/badge";
 import {
+    ArrowRight,
+    CalendarDays,
+    Hand,
     HelpCircle,
     Shell,
-    Hand,
-    Sparkles,
-    ArrowRight,
-    Search,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -35,166 +36,157 @@ const props = defineProps({
 
 const page = usePage();
 const currentUser = computed(() => page.props.auth?.user);
+const hasAbsenceCredits = computed(() => props.activeAbsences.length > 0);
+const { filters, setFilter, setDates } = useCalendarFilters(props.filters);
 
-const hasAbsenceCredits = computed(
-    () => props.activeAbsences.length > 0,
-);
-
-// Laravel transmet les paramètres du CTA dans props.filters.
-// Le composable normalise le type et utilise 1 par défaut.
-const { filters, setFilter, setDates } =
-    useCalendarFilters(props.filters);
-
-const parseBool = (value) =>
-    value === true ||
-    value === 1 ||
-    value === "1" ||
-    value === "true";
-
-// Bindings réactifs des switches.
 const hideFullChecked = computed({
-    get: () => parseBool(filters.hide_full),
+    get: () => filters.hide_full === 1,
     set: (value) => setFilter("hide_full", value ? 1 : 0),
 });
-
 const onlyMakeupsChecked = computed({
-    get: () => parseBool(filters.only_makeups),
+    get: () => filters.only_makeups === 1,
     set: (value) => setFilter("only_makeups", value ? 1 : 0),
 });
-
-const activeTypeId = computed(() => {
-    const typeId = Number(filters.type_id);
-
-    return [1, 2, 3].includes(typeId) ? typeId : 1;
-});
-
-const handleTypeChange = (typeId) => {
-    if (activeTypeId.value === typeId) return;
-
-    nextLessonMessage.value = "";
-    setFilter("type_id", typeId);
-};
+const activeTypeId = computed(() => Number(filters.type_id));
+const lessonTypes = [
+    { id: 1, label: "Cours collectifs" },
+    { id: 2, label: "Stages" },
+    { id: 3, label: "Cours privés" },
+];
+const spotTypes = [
+    { id: "", label: "Tous", icon: null },
+    { id: "wheel", label: "Tour", icon: Shell },
+    { id: "handbuilding", label: "Modelage", icon: Hand },
+];
 
 const selectedLesson = ref(null);
 const isDetailModalOpen = ref(false);
 const isBookingModalOpen = ref(false);
 const bookingMode = ref("regular");
-
 const calendarRef = ref(null);
 const isFindingNextLesson = ref(false);
 const nextLessonMessage = ref("");
 
-// Détection mobile pour utiliser la vue liste.
-const isMobile = ref(false);
+const {
+    isReady,
+    isMobile,
+    title,
+    currentView,
+    canGoPrevious,
+    isCurrentPeriod,
+    todayIso,
+    initialView,
+    handleDatesSet,
+    previous,
+    next,
+    goToday,
+    changeView,
+} = useCalendarNavigation(calendarRef, setDates);
 
-const checkIsMobile = () => {
-    if (typeof window === "undefined") return;
-
-    const wasMobile = isMobile.value;
-    isMobile.value = window.innerWidth < 768;
-
-    const calendarApi = calendarRef.value?.getApi();
-
-    if (!calendarApi) return;
-
-    if (isMobile.value && calendarApi.view.type !== "listWeek") {
-        calendarApi.changeView("listWeek");
-    }
-
-    if (
-        wasMobile &&
-        !isMobile.value &&
-        calendarApi.view.type === "listWeek"
-    ) {
-        calendarApi.changeView("timeGridWeek");
-    }
-};
-
-onMounted(() => {
-    checkIsMobile();
-    window.addEventListener("resize", checkIsMobile);
-});
-
-onUnmounted(() => {
-    if (typeof window !== "undefined") {
-        window.removeEventListener("resize", checkIsMobile);
-    }
-});
-
-const todayIso = new Date().toISOString().split("T")[0];
+const initialDate =
+    filters.start_date && filters.start_date > todayIso
+        ? filters.start_date
+        : todayIso;
 
 const calendarEvents = computed(() =>
     props.events.map((event) => ({
         ...event,
+        classNames: [
+            ...(Array.isArray(event.classNames) ? event.classNames : []),
+            calendarCapacityClass(event),
+        ],
+        color: "var(--calendar-event-bg)",
+        backgroundColor: "var(--calendar-event-bg)",
+        borderColor: "var(--calendar-event-border)",
+        textColor: "var(--calendar-event-text)",
+        // Les modales reçoivent les données d'origine, y compris les champs métier.
         extendedProps: { ...event },
     })),
 );
 
-// Options FullCalendar adaptées au mobile et au desktop.
 const calendarOptions = computed(() => ({
-    plugins: [
-        dayGridPlugin,
-        timeGridPlugin,
-        listPlugin,
-        interactionPlugin,
-    ],
-    initialView: isMobile.value ? "listWeek" : "timeGridWeek",
-    validRange: {
-        start: todayIso,
-    },
-    headerToolbar: {
-        left: isMobile.value
-            ? "prev,next today"
-            : "prev,next today nextLesson",
-        center: "title",
-        right: isMobile.value
-            ? ""
-            : "timeGridWeek,dayGridMonth,listWeek",
-    },
-    customButtons: {
-        nextLesson: {
-            text: "Prochaine séance dispo",
-            click: findNextLesson,
-        },
-    },
-    buttonText: {
-        today: "Aujourd'hui",
-        month: "Mois",
-        week: "Semaine",
-        list: "Liste",
-    },
+    plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
+    initialView: initialView.value,
+    initialDate,
+    validRange: { start: todayIso },
+    headerToolbar: false,
     events: calendarEvents.value,
     locale: frLocale,
     firstDay: 1,
     slotMinTime: "08:00:00",
     slotMaxTime: "22:00:00",
+    slotDuration: "00:30:00",
+    slotLabelInterval: "01:00:00",
     allDaySlot: false,
     height: "auto",
     expandRows: true,
+    stickyHeaderDates: false,
+    eventInteractive: true,
     eventClick: handleEventClick,
     datesSet: handleDatesSet,
-    eventTimeFormat: {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
+    eventTimeFormat: { hour: "2-digit", minute: "2-digit", hour12: false },
+    views: {
+        timeGridWeek: {
+            displayEventTime: false,
+            slotEventOverlap: false,
+            eventMinHeight: 24,
+            eventShortHeight: 80,
+            dayHeaderFormat: { weekday: "short", day: "numeric" },
+        },
+        dayGridMonth: {
+            eventDisplay: "block",
+            displayEventTime: true,
+            displayEventEnd: false,
+            dayMaxEvents: 3,
+        },
+        listWeek: {
+            displayEventTime: true,
+            displayEventEnd: true,
+            listDayFormat: { weekday: "long", day: "numeric", month: "long" },
+            listDaySideFormat: false,
+        },
     },
 }));
 
-function handleEventClick(info) {
-    selectedLesson.value = info.event.extendedProps;
+function openLesson(event) {
+    selectedLesson.value = event.extendedProps;
     isDetailModalOpen.value = true;
 }
 
-function handleDatesSet(dateInfo) {
-    const start = dateInfo.startStr.split("T")[0];
-    const end = dateInfo.endStr.split("T")[0];
-
-    setDates(start, end);
+function handleEventClick(info) {
+    openLesson(info.event);
 }
+
+let nextLessonController = null;
+
+function resetNextLessonSearch() {
+    nextLessonController?.abort();
+    nextLessonController = null;
+    isFindingNextLesson.value = false;
+    nextLessonMessage.value = "";
+}
+
+watch(
+    () => [
+        filters.type_id,
+        filters.course_id,
+        filters.spot_type,
+        filters.hide_full,
+        filters.only_makeups,
+        filters.start_date,
+        filters.end_date,
+    ],
+    resetNextLessonSearch,
+    { flush: "sync" },
+);
+
+onUnmounted(() => nextLessonController?.abort());
 
 async function findNextLesson() {
     if (isFindingNextLesson.value) return;
 
+    const controller = new AbortController();
+    nextLessonController = controller;
     isFindingNextLesson.value = true;
     nextLessonMessage.value = "";
 
@@ -203,55 +195,44 @@ async function findNextLesson() {
             route("calendrier.next-lesson"),
             window.location.origin,
         );
-
         url.searchParams.set("type_id", String(activeTypeId.value));
-
-        if (filters.course_id) {
+        if (filters.course_id)
             url.searchParams.set("course_id", filters.course_id);
-        }
-
-        if (filters.spot_type) {
+        if (filters.spot_type)
             url.searchParams.set("spot_type", filters.spot_type);
-        }
-
-        if (parseBool(filters.hide_full)) {
-            url.searchParams.set("hide_full", "1");
-        }
-
-        // Les rattrapages concernent uniquement les collectifs.
-        if (
-            activeTypeId.value === 1 &&
-            parseBool(filters.only_makeups)
-        ) {
+        if (filters.hide_full === 1) url.searchParams.set("hide_full", "1");
+        if (activeTypeId.value === 1 && filters.only_makeups === 1) {
             url.searchParams.set("only_makeups", "1");
         }
-
-        if (filters.end_date) {
+        if (filters.end_date)
             url.searchParams.set("from_date", filters.end_date);
-        }
 
         const response = await fetch(url, {
             headers: { Accept: "application/json" },
+            signal: controller.signal,
         });
-
-        if (!response.ok) {
-            throw new Error("Erreur lors de la recherche");
-        }
+        if (!response.ok) throw new Error("Erreur lors de la recherche");
 
         const { date } = await response.json();
+        if (controller.signal.aborted || nextLessonController !== controller)
+            return;
 
         if (!date) {
             nextLessonMessage.value =
                 "Aucune séance future trouvée correspondant à vos critères.";
             return;
         }
-
         calendarRef.value?.getApi().gotoDate(date);
     } catch (error) {
-        nextLessonMessage.value =
-            "Impossible de localiser la prochaine séance pour le moment.";
+        if (!controller.signal.aborted) {
+            nextLessonMessage.value =
+                "Impossible de localiser la prochaine séance pour le moment.";
+        }
     } finally {
-        isFindingNextLesson.value = false;
+        if (nextLessonController === controller) {
+            nextLessonController = null;
+            isFindingNextLesson.value = false;
+        }
     }
 }
 
@@ -261,21 +242,15 @@ function requireAuthOrProceed(callback) {
             window.location.pathname +
             window.location.search +
             window.location.hash;
-
-        window.location.href = route("auth.continue", {
-            to: returnTo,
-        });
-
+        window.location.href = route("auth.continue", { to: returnTo });
         return;
     }
-
     callback();
 }
 
 function handleSelectRegular(lesson) {
     requireAuthOrProceed(() => {
         if (lesson) selectedLesson.value = lesson;
-
         bookingMode.value = "regular";
         isDetailModalOpen.value = false;
         isBookingModalOpen.value = true;
@@ -285,7 +260,6 @@ function handleSelectRegular(lesson) {
 function handleSelectMakeup(lesson) {
     requireAuthOrProceed(() => {
         if (lesson) selectedLesson.value = lesson;
-
         bookingMode.value = "makeup";
         isDetailModalOpen.value = false;
         isBookingModalOpen.value = true;
@@ -297,350 +271,233 @@ function handleSelectMakeup(lesson) {
     <Head title="Planning & Calendrier des Cours" />
     <Nav />
 
-    <main class="min-h-screen bg-gray-50/50 font-brand py-6 sm:py-10">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-            <!-- ========================================================= -->
-            <!-- 1. EN-TÊTE & SÉLECTION DES FORMULES                       -->
-            <!-- ========================================================= -->
-            <div
-                class="flex flex-col md:flex-row md:items-center md:justify-between gap-5 bg-white p-5 sm:p-7 rounded-2xl border border-gray-200 shadow-xs"
-            >
-                <div>
-                    <h1
-                        class="text-3xl sm:text-5xl font-bold text-gray-900 leading-tight"
-                    >
-                        Planning des cours
-                    </h1>
-                    <p class="text-xs sm:text-sm text-gray-500 mt-1">
-                        Consultez les disponibilités en temps réel et réservez
-                        vos séances ou rattrapages.
-                    </p>
-                </div>
+    <main class="min-h-screen bg-white py-6 font-brand sm:py-12">
+        <div
+            class="mx-auto max-w-6xl space-y-6 px-4 sm:space-y-9 sm:px-6 lg:px-8"
+        >
+            <header>
+                <h1
+                    class="text-3xl font-normal leading-tight text-gray-900 sm:text-6xl"
+                >
+                    Planning des cours
+                </h1>
+                <p
+                    class="mt-3 max-w-2xl text-base leading-relaxed text-gray-500 sm:mt-4 sm:text-lg"
+                >
+                    Trouvez votre prochaine séance à l’atelier et réservez un
+                    cours ou un rattrapage.
+                </p>
 
-                <!-- Boutons de formule -->
-                <div class="flex flex-wrap items-center gap-2">
-                    <Button
-                        type="button"
-                        :class="[
-                            'text-xs sm:text-sm font-semibold h-10 px-4 rounded-xl transition-all',
-                            activeTypeId === 1
-                                ? 'bg-sage text-white hover:bg-sage-dark shadow-xs'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-0',
-                        ]"
-                        @click="handleTypeChange(1)"
-                    >
-                        Cours Collectifs
-                    </Button>
-                    <Button
-                        type="button"
-                        :class="[
-                            'text-xs sm:text-sm font-semibold h-10 px-4 rounded-xl transition-all',
-                            activeTypeId === 2
-                                ? 'bg-sage text-white hover:bg-sage-dark shadow-xs'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-0',
-                        ]"
-                        @click="handleTypeChange(2)"
-                    >
-                        Stages
-                    </Button>
-                    <Button
-                        type="button"
-                        :class="[
-                            'text-xs sm:text-sm font-semibold h-10 px-4 rounded-xl transition-all',
-                            activeTypeId === 3
-                                ? 'bg-sage text-white hover:bg-sage-dark shadow-xs'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-0',
-                        ]"
-                        @click="handleTypeChange(3)"
-                    >
-                        Cours Privés
-                    </Button>
-                </div>
-            </div>
-
-            <!-- ========================================================= -->
-            <!-- 2. BARRE DE FILTRES AVANCÉS & SWITCHS FONCTIONNELS        -->
-            <!-- ========================================================= -->
-            <div
-                class="bg-white p-4 rounded-xl border border-gray-200 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4"
-            >
-                <!-- Filtre Poste -->
                 <div
-                    class="flex items-center gap-1 bg-gray-100 p-1 rounded-xl w-full sm:w-fit overflow-x-auto"
+                    class="mt-5 grid grid-cols-3 gap-2 sm:mt-6 sm:inline-grid sm:gap-3"
+                    role="group"
+                    aria-label="Formule de cours"
                 >
                     <button
+                        v-for="type in lessonTypes"
+                        :key="type.id"
                         type="button"
+                        :aria-pressed="activeTypeId === type.id"
                         :class="[
-                            'px-3 py-1.5 text-xs font-medium rounded-lg transition-all whitespace-nowrap',
-                            !filters.spot_type
-                                ? 'bg-white text-gray-900 shadow-xs'
-                                : 'text-gray-600 hover:text-gray-900',
+                            'min-h-12 min-w-0 rounded-lg border px-2 py-2 text-xs  leading-snug transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:px-5 sm:text-sm',
+                            activeTypeId === type.id
+                                ? 'border-sage-border bg-sage text-white font-bold'
+                                : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-bold',
                         ]"
-                        @click="setFilter('spot_type', '')"
+                        @click="setFilter('type_id', type.id)"
                     >
-                        Tous les postes
-                    </button>
-                    <button
-                        type="button"
-                        :class="[
-                            'px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap',
-                            filters.spot_type === 'wheel'
-                                ? 'bg-white text-gray-900 shadow-xs'
-                                : 'text-gray-600 hover:text-gray-900',
-                        ]"
-                        @click="setFilter('spot_type', 'wheel')"
-                    >
-                        <Shell class="w-3.5 h-3.5" />
-                        Tour
-                    </button>
-                    <button
-                        type="button"
-                        :class="[
-                            'px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap',
-                            filters.spot_type === 'handbuilding'
-                                ? 'bg-white text-gray-900 shadow-xs'
-                                : 'text-gray-600 hover:text-gray-900',
-                        ]"
-                        @click="setFilter('spot_type', 'handbuilding')"
-                    >
-                        <Hand class="w-3.5 h-3.5" />
-                        Modelage
+                        {{ type.label }}
                     </button>
                 </div>
+            </header>
 
-                <!-- Toggles Shadcn Fiabilisés -->
+            <section
+                aria-label="Filtres des séances"
+                class="space-y-3 border-y border-gray-100 py-4 sm:space-y-5 sm:py-5"
+            >
                 <div
-                    class="flex flex-wrap items-center gap-5 text-xs font-medium text-gray-700"
+                    class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5"
                 >
-                    <!-- Masquer complets -->
-                    <div class="flex items-center gap-2">
-                        <Switch id="hide_full" v-model="hideFullChecked" />
+                    <span
+                        id="calendar-spot-label"
+                        class="sr-only text-sm font-medium text-gray-700 sm:not-sr-only"
+                        >Poste</span
+                    >
+                    <div
+                        class="grid min-w-0 grid-cols-3 gap-1 rounded-lg bg-gray-100 p-1 sm:w-auto"
+                        role="group"
+                        aria-labelledby="calendar-spot-label"
+                    >
+                        <button
+                            v-for="spot in spotTypes"
+                            :key="spot.id"
+                            type="button"
+                            :aria-pressed="filters.spot_type === spot.id"
+                            :class="[
+                                'flex min-h-10 min-w-0 items-center justify-center gap-1.5 rounded-md px-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:px-4 sm:text-sm',
+                                filters.spot_type === spot.id
+                                    ? 'bg-white font-medium text-gray-900 shadow-sm'
+                                    : 'text-gray-600 hover:text-gray-900',
+                            ]"
+                            @click="setFilter('spot_type', spot.id)"
+                        >
+                            <component
+                                :is="spot.icon"
+                                v-if="spot.icon"
+                                class="h-3.5 w-3.5 shrink-0"
+                                aria-hidden="true"
+                            />
+                            {{ spot.label }}
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid gap-3 sm:flex sm:flex-wrap sm:gap-x-8">
+                    <div class="flex min-h-9 items-center gap-3">
+                        <Switch
+                            id="hide_full"
+                            v-model="hideFullChecked"
+                            class="shrink-0"
+                        />
                         <Label
                             for="hide_full"
-                            class="cursor-pointer select-none text-xs"
+                            class="min-w-0 cursor-pointer text-sm font-normal leading-snug text-gray-600"
                         >
                             Masquer les cours complets
                         </Label>
                     </div>
-
-                    <!-- Rattrapages uniquement (Collectifs) -->
                     <div
                         v-if="activeTypeId === 1"
-                        class="flex items-center gap-2 sm:border-l sm:border-gray-200 sm:pl-5"
+                        class="flex min-h-9 items-center gap-3"
                     >
                         <Switch
                             id="only_makeups"
                             v-model="onlyMakeupsChecked"
+                            class="shrink-0"
                         />
                         <Label
                             for="only_makeups"
-                            class="cursor-pointer select-none text-xs flex items-center gap-1"
+                            class="min-w-0 cursor-pointer text-sm font-normal leading-snug text-gray-600"
                         >
-                            <Sparkles class="w-3.5 h-3.5 text-sage-dark" />
                             Rattrapages disponibles uniquement
                         </Label>
                     </div>
-
-                    <!-- Bouton Prochaine séance dispo (Mobile) -->
-                    <button
-                        v-if="isMobile"
-                        type="button"
-                        class="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 underline ml-auto"
-                        @click="findNextLesson"
-                    >
-                        <Search class="w-3 h-3" /> Prochaine séance
-                    </button>
                 </div>
-            </div>
+            </section>
 
-            <!-- ========================================================= -->
-            <!-- 3. CALENDRIER FULLCALENDAR RESPONSIVE                     -->
-            <!-- ========================================================= -->
-            <div
-                class="bg-white p-3 sm:p-6 rounded-2xl border border-gray-200 shadow-sm calendar-container"
+            <section
+                class="calendar-surface min-w-0 rounded-xl border border-gray-200 bg-white p-3 sm:p-5"
+                aria-labelledby="calendar-period"
             >
-                <FullCalendar ref="calendarRef" :options="calendarOptions">
-                    <!-- Template personnalisé des événements -->
-                    <template #eventContent="{ event, timeText, view }">
-                        <!-- Vue Mois -->
-                        <div
-                            v-if="view.type === 'dayGridMonth'"
-                            class="w-full flex items-center justify-between gap-1 p-0.5 text-[11px] leading-tight overflow-hidden"
-                        >
-                            <span class="truncate font-semibold">{{
-                                event.title
-                            }}</span>
-                            <span
-                                v-if="event.extendedProps.is_user_enrolled"
-                                class="w-2 h-2 rounded-full bg-blue-600 shrink-0"
-                                title="Inscrit"
+                <CalendarToolbar
+                    :title="title"
+                    :current-view="currentView"
+                    :is-mobile="isMobile"
+                    :is-ready="isReady"
+                    :can-go-previous="canGoPrevious"
+                    :is-current-period="isCurrentPeriod"
+                    :is-finding-next-lesson="isFindingNextLesson"
+                    @previous="previous"
+                    @next="next"
+                    @today="goToday"
+                    @change-view="changeView"
+                    @find-next="findNextLesson"
+                />
+
+                <div class="pt-4">
+                    <FullCalendar
+                        v-if="isReady"
+                        ref="calendarRef"
+                        :options="calendarOptions"
+                    >
+                        <template #eventContent="{ event, timeText, view }">
+                            <CalendarEventContent
+                                :event="event"
+                                :time-text="timeText"
+                                :view-type="view.type"
+                                :has-absence-credits="hasAbsenceCredits"
+                                @select="openLesson"
                             />
-                            <span
-                                v-else-if="
-                                    event.extendedProps
-                                        .total_standard_available === 0
-                                "
-                                class="text-[9px] text-red-600 font-bold shrink-0"
-                            >
-                                Complet
-                            </span>
-                            <span
-                                v-else
-                                class="text-[9px] text-gray-500 font-medium shrink-0"
-                            >
-                                {{
-                                    event.extendedProps.total_standard_available
-                                }}
-                                pl.
-                            </span>
-                        </div>
-
-                        <!-- Vue Semaine / Journée / Liste -->
-                        <div
-                            v-else
-                            class="p-1.5 w-full h-full flex flex-col justify-between overflow-hidden text-xs leading-normal"
-                        >
-                            <div>
-                                <div
-                                    class="flex items-start justify-between gap-1"
+                        </template>
+                        <template #noEventsContent>
+                            <div class="mx-auto max-w-sm px-4 py-8 text-center">
+                                <CalendarDays
+                                    class="mx-auto h-7 w-7 text-gray-400"
+                                    aria-hidden="true"
+                                />
+                                <p
+                                    class="mt-4 text-base font-medium text-gray-900"
                                 >
-                                    <span
-                                        class="font-bold text-gray-900 text-xs sm:text-[13px] leading-tight break-words"
-                                    >
-                                        {{ event.title }}
-                                    </span>
-                                    <Badge
-                                        v-if="
-                                            event.extendedProps.is_user_enrolled
-                                        "
-                                        class="bg-blue-600 text-white text-[9px] px-1 py-0 font-bold shrink-0"
-                                    >
-                                        Inscrit
-                                    </Badge>
-                                </div>
-                                <div
-                                    class="text-[11px] text-gray-600 mt-1 flex items-center gap-1.5 flex-wrap"
+                                    Aucune séance à afficher
+                                </p>
+                                <p
+                                    class="mt-2 text-sm leading-relaxed text-gray-500"
                                 >
-                                    <span>{{ timeText }}</span>
-                                    <span>•</span>
-                                    <span class="truncate">{{
-                                        event.extendedProps.instructor
-                                    }}</span>
-                                </div>
+                                    Changez de semaine, ajustez vos filtres ou
+                                    recherchez la prochaine séance disponible.
+                                </p>
                             </div>
+                        </template>
+                    </FullCalendar>
+                    <div
+                        v-else
+                        class="flex min-h-64 items-center justify-center text-sm text-gray-500"
+                        role="status"
+                    >
+                        Chargement du calendrier…
+                    </div>
+                </div>
 
-                            <!-- Jauges de places -->
-                            <div
-                                class="flex items-center gap-1.5 mt-1.5 pt-1 border-t border-black/5 text-[11px] font-semibold flex-wrap"
-                            >
-                                <span
-                                    v-if="
-                                        event.extendedProps
-                                            .total_standard_available === 0
-                                    "
-                                    class="text-red-700 bg-red-100 px-1.5 py-0.5 rounded text-[10px]"
-                                >
-                                    Complet
-                                </span>
-                                <template v-else>
-                                    <span
-                                        v-if="
-                                            event.extendedProps.wheel
-                                                ?.standard_available > 0
-                                        "
-                                        class="inline-flex items-center gap-1 text-sky-800 bg-sky-50 px-1.5 py-0.5 rounded text-[10px]"
-                                    >
-                                        <Shell class="w-3 h-3" />
-                                        {{
-                                            event.extendedProps.wheel
-                                                .standard_available
-                                        }}
-                                    </span>
-                                    <span
-                                        v-if="
-                                            event.extendedProps.handbuilding
-                                                ?.standard_available > 0
-                                        "
-                                        class="inline-flex items-center gap-1 text-orange-800 bg-orange-50 px-1.5 py-0.5 rounded text-[10px]"
-                                    >
-                                        <Hand class="w-3 h-3" />
-                                        {{
-                                            event.extendedProps.handbuilding
-                                                .standard_available
-                                        }}
-                                    </span>
-                                </template>
+                <div role="status" aria-live="polite" aria-atomic="true">
+                    <p
+                        v-if="nextLessonMessage"
+                        class="mt-4 rounded-lg border border-earth-border bg-earth-light p-3 text-sm leading-relaxed text-gray-700"
+                    >
+                        {{ nextLessonMessage }}
+                    </p>
+                </div>
+            </section>
 
-                                <!-- N'affiche "Rattrapage dispo" que si l'utilisateur possède des crédits d'absence -->
-                                <span
-                                    v-if="
-                                        hasAbsenceCredits &&
-                                        event.extendedProps.allows_makeup &&
-                                        event.extendedProps
-                                            .has_makeups_available
-                                    "
-                                    class="inline-flex items-center gap-1 text-sage-dark bg-sage-light px-1.5 py-0.5 rounded text-[10px]"
-                                >
-                                    <Sparkles class="w-3 h-3" /> Rattrapage
-                                    dispo
-                                </span>
-                            </div>
-                        </div>
-                    </template>
-                </FullCalendar>
-
-                <p
-                    v-if="nextLessonMessage"
-                    class="mt-3 text-xs text-amber-800 bg-amber-50 p-3 rounded-xl border border-amber-200 font-medium"
-                    aria-live="polite"
-                >
-                    {{ nextLessonMessage }}
-                </p>
-            </div>
-
-
-            <!-- ========================================================= -->
-            <!-- 4. CALL TO ACTION FAQ                                     -->
-            <!-- ========================================================= -->
-
-            <div
-                class="rounded-2xl bg-gray-900 text-white p-6  sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-5"
+            <aside
+                aria-labelledby="faq-cta-title"
+                class="!mt-24 flex flex-col justify-between gap-5 rounded-2xl bg-gray-900 p-6 text-white sm:flex-row sm:items-center sm:p-8"
             >
                 <div>
-                    <div class="flex items-center gap-2">
-                        <HelpCircle class="h-4 w-4 text-gray-300" />
+                    <h2
+                        id="faq-cta-title"
+                        class="flex items-center gap-2 text-lg font-semibold"
+                    >
+                        <HelpCircle
+                            class="h-4 w-4 shrink-0 text-gray-300"
+                            aria-hidden="true"
+                        />
 
-                        <h2 class="font-semibold text-lg">
-                            Une question avant de réserver ?
-                        </h2>
-                    </div>
+                        Une question avant de réserver ?
+                    </h2>
 
-                    <p class="text-sm text-gray-300 mt-2 max-w-xl">
-                        Retrouvez toutes les informations sur les modules, les
-                        réservations, les absences et les cours de rattrapage
-                        dans notre FAQ.
+                    <p class="mt-2 max-w-xl text-sm text-gray-300">
+                        Modules, réservations, absences et rattrapages :
+                        retrouvez les réponses dans notre FAQ.
                     </p>
                 </div>
 
                 <Button
                     as-child
                     size="sm"
-                    class="group bg-white text-gray-900 hover:bg-gray-100 shrink-0"
+                    class="shrink-0 bg-white text-gray-900 hover:bg-gray-100"
                 >
-                    <Link :href="route('faq.index')">
+                    <Link :href="route('faq.index')" class="group">
                         Consulter la FAQ
 
                         <ArrowRight
-                            class="h-4 w-4 ml-1.5 transition-transform group-hover:translate-x-1"
+                            class="ml-1.5 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1"
+                            aria-hidden="true"
                         />
                     </Link>
                 </Button>
-            </div>
+            </aside>
         </div>
 
-        <!-- ========================================================= -->
-        <!-- 5. MODALES DE DÉTAIL & DE RÉSERVATION                     -->
-        <!-- ========================================================= -->
         <LessonDetailModal
             v-model:open="isDetailModalOpen"
             :lesson="selectedLesson"
@@ -648,7 +505,6 @@ function handleSelectMakeup(lesson) {
             @select-regular="handleSelectRegular"
             @select-makeup="handleSelectMakeup"
         />
-
         <BookingConfirmationModal
             v-model:open="isBookingModalOpen"
             :lesson="selectedLesson"
@@ -658,79 +514,235 @@ function handleSelectMakeup(lesson) {
             @success="isBookingModalOpen = false"
         />
     </main>
-
     <Footer />
 </template>
 
 <style scoped>
-:deep(.fc-event) {
+.calendar-surface {
+    --calendar-event-bg: theme("colors.sage.light");
+    --calendar-event-border: theme("colors.sage.border");
+    --calendar-event-accent: theme("colors.sage.DEFAULT");
+    --calendar-event-hover-border: theme("colors.sage.dark");
+    --calendar-event-text: theme("colors.gray.900");
+    --fc-border-color: theme("colors.gray.100");
+    --fc-today-bg-color: theme("colors.sage.light");
+    --fc-neutral-bg-color: theme("colors.gray.50");
+    --fc-page-bg-color: white;
+    --fc-list-event-hover-bg-color: theme("colors.sage.light");
+}
+
+:deep(.fc .lesson-capacity--available) {
+    --calendar-event-bg: #e8f2f1;
+    --calendar-event-border: #b8d5d2;
+    --calendar-event-accent: #5e8e8a;
+    --calendar-event-hover-border: #477470;
+}
+
+:deep(.fc .lesson-capacity--limited) {
+    --calendar-event-bg: #fff3d6;
+    --calendar-event-border: #f0cf83;
+    --calendar-event-accent: #c47d16;
+    --calendar-event-hover-border: #9f6210;
+}
+
+:deep(.fc .lesson-capacity--full) {
+    --calendar-event-bg: #fdeaea;
+    --calendar-event-border: #efb5b5;
+    --calendar-event-accent: #c95757;
+    --calendar-event-hover-border: #a83f3f;
+}
+
+:deep(.fc .lesson-capacity--outside-window) {
+    --calendar-event-bg: #f1f5f9;
+    --calendar-event-border: #cbd5e1;
+    --calendar-event-accent: #94a3b8;
+    --calendar-event-hover-border: #64748b;
+}
+
+:deep(.fc) {
+    font-family: inherit;
+    font-size: 13px;
+}
+
+:deep(.fc .fc-col-header-cell-cushion) {
+    padding: 12px 3px;
+    color: theme("colors.gray.600");
+    font-size: 12px;
+    font-weight: 500;
+}
+
+:deep(.fc .fc-day-today .fc-col-header-cell-cushion) {
+    color: theme("colors.gray.900");
+    font-weight: 600;
+}
+
+:deep(.fc .fc-timegrid-slot) {
+    height: 1.5rem;
+}
+
+:deep(.fc .fc-timegrid-slot-label-cushion) {
+    padding: 0 8px;
+    color: theme("colors.gray.500");
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+
+:deep(.fc .fc-timegrid-slot-minor) {
+    border-top-style: dotted;
+}
+
+:deep(.fc .fc-timegrid-event),
+:deep(.fc .fc-daygrid-block-event) {
+    border: 1px solid var(--calendar-event-border);
+    border-left: 3px solid var(--calendar-event-accent);
+    border-radius: 6px;
+    box-shadow: none;
+    overflow: hidden;
     cursor: pointer;
-    border-radius: 8px;
-    border: none;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     transition:
-        transform 0.15s ease,
-        box-shadow 0.15s ease;
+        border-color 150ms ease,
+        box-shadow 150ms ease;
 }
 
-:deep(.fc-event:hover) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+:deep(.fc .fc-timegrid-event:hover),
+:deep(.fc .fc-daygrid-block-event:hover) {
+    border-color: var(--calendar-event-hover-border);
+    box-shadow: 0 0 0 1px var(--calendar-event-border);
 }
 
-:deep(.fc-timegrid-event) {
-    white-space: normal !important;
-    min-height: 48px;
+:deep(.fc .fc-timegrid-event:focus-visible),
+:deep(.fc .fc-daygrid-block-event:focus-visible) {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
 }
 
-:deep(.fc-toolbar-title) {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: #111827;
+:deep(.fc .fc-timegrid-event .fc-event-main) {
+    height: 100%;
+    padding: 0;
 }
 
-@media (max-width: 640px) {
-    :deep(.fc-toolbar-title) {
-        font-size: 0.95rem;
+:deep(.fc .fc-timegrid-event-short .lesson-event__secondary),
+:deep(.fc .fc-timegrid-event-short .lesson-event__enrolled) {
+    display: none;
+}
+
+:deep(.fc .fc-timegrid-event-short .lesson-event--week) {
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+:deep(.fc .fc-timegrid-col-events) {
+    margin: 0 3px;
+}
+
+:deep(.fc .fc-daygrid-day-number) {
+    padding: 8px;
+    color: theme("colors.gray.600");
+    font-size: 12px;
+}
+
+:deep(.fc .fc-daygrid-event) {
+    margin: 2px 3px;
+}
+
+:deep(.fc .fc-daygrid-more-link) {
+    color: theme("colors.gray.700");
+    font-weight: 500;
+}
+
+/* On réorganise les cellules natives : FullCalendar conserve le calcul des heures. */
+:deep(.fc .fc-list) {
+    border: 0;
+}
+
+:deep(.fc .fc-list-table),
+:deep(.fc .fc-list-table tbody),
+:deep(.fc .fc-list-day),
+:deep(.fc .fc-list-day > th) {
+    display: block;
+    width: 100%;
+}
+
+:deep(.fc .fc-list-day > th) {
+    border: 0;
+}
+
+:deep(.fc .fc-list-day-cushion) {
+    display: flex;
+    padding: 20px 0 8px;
+    background: white;
+    color: theme("colors.gray.700");
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+:deep(
+    .fc .fc-list-table tbody > .fc-list-day:first-child .fc-list-day-cushion
+) {
+    padding-top: 0;
+}
+
+:deep(.fc .fc-list-day-text) {
+    float: none;
+    overflow-wrap: anywhere;
+}
+
+:deep(.fc .fc-list-event) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 10px;
+    overflow: hidden;
+    border: 1px solid var(--calendar-event-border);
+    border-left: 3px solid var(--calendar-event-accent);
+    border-radius: 8px;
+    background: var(--calendar-event-bg);
+    cursor: pointer;
+}
+
+:deep(.fc .fc-list-event:hover),
+:deep(.fc .fc-list-event:focus-within) {
+    border-color: var(--calendar-event-hover-border);
+}
+
+:deep(.fc .fc-list-event > td) {
+    display: block;
+    width: auto;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+}
+
+:deep(.fc .fc-list-event > .fc-list-event-graphic) {
+    display: none;
+}
+
+:deep(.fc .fc-list-event > .fc-list-event-time) {
+    padding: 12px 14px 0;
+    color: theme("colors.gray.600");
+    font-size: 13px;
+    font-weight: 500;
+    white-space: normal;
+    font-variant-numeric: tabular-nums;
+}
+
+:deep(.fc .fc-list-event > .fc-list-event-title) {
+    padding: 5px 14px 14px;
+}
+
+:deep(.fc .fc-list-empty) {
+    min-height: 240px;
+    background: white;
+}
+
+:deep(.fc .fc-list-empty-cushion) {
+    margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :deep(.fc .fc-timegrid-event),
+    :deep(.fc .fc-daygrid-block-event) {
+        transition: none;
     }
-}
-
-:deep(.fc-button-primary) {
-    background-color: #1c1917;
-    border-color: #1c1917;
-    color: #ffffff;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    border-radius: 0.6rem;
-    padding: 0.4rem 0.75rem;
-    transition: all 0.15s ease;
-}
-
-:deep(.fc-button-primary:hover) {
-    background-color: #44403c;
-    border-color: #44403c;
-}
-
-:deep(.fc-button-primary:disabled) {
-    background-color: #f5f5f4;
-    border-color: #e7e5e4;
-    color: #a8a29e;
-}
-
-:deep(.fc-button-active) {
-    background-color: #78716c !important;
-    border-color: #78716c !important;
-}
-
-:deep(.fc-theme-standard td),
-:deep(.fc-theme-standard th) {
-    border-color: #f3f4f6;
-}
-
-:deep(.fc-col-header-cell-cushion) {
-    color: #4b5563;
-    font-weight: 600;
-    font-size: 0.8125rem;
-    padding: 0.5rem 0;
 }
 </style>

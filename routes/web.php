@@ -81,6 +81,9 @@ Route::get('/ateliers', [AtelierController::class, 'index'])->name('ateliers.ind
 Route::get('/stages', [StageController::class, 'index'])->name('stages.index');
 Route::get('/faq', FaqController::class)->name('faq.index');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact.index');
+Route::post('/contact', [ContactController::class, 'store'])
+    ->middleware(HandlePrecognitiveRequests::class)
+    ->name('contact.store');
 Route::get('/galerie', GalerieController::class)->name('gallery.index');
 
 Route::get('/calendrier/prochaine-seance', [CalendrierController::class, 'nextLesson'])
