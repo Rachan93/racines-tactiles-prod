@@ -52,7 +52,7 @@ const submit = () => {
 
             toast.success("Message envoyé", {
                 description:
-                    "Votre message a bien été envoyé. Nous vous répondrons dès que possible.",
+                    "Nous vous répondrons dès que possible.",
             });
         },
     });

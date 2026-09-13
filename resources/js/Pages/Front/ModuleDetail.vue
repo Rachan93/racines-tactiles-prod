@@ -510,7 +510,7 @@ const confirmCancelAbsence = () => {
                         >
                             <CheckCircle2 class="w-4 h-4" />
 
-                            Quota restant
+                            Quota de rattrapages restant
                         </div>
 
                         <p

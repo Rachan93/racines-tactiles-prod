@@ -314,9 +314,9 @@ const confirmCancelAbsence = () => {
                             <!-- Type d'inscription -->
                             <span
                                 v-if="enrollment.enrollment_type === 'makeup'"
-                                class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-earth-light text-earth-header border border-earth-border"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sage-dark text-sage-header border border-sage text-white"
                             >
-                                <Sparkles class="w-3.5 h-3.5" /> Rattrapage
+                                 Rattrapage
                             </span>
 
                             <!-- Poste avec dropdown -->

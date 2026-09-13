@@ -7,7 +7,7 @@ use App\Http\Controllers\Admin\FaqController as AdminFaqController;
 use App\Http\Controllers\Admin\InstructorController as AdminInstructorController;
 use App\Http\Controllers\Admin\LessonController as AdminLessonController;
 use App\Http\Controllers\Admin\StudioClosureController as AdminStudioClosureController;
-use App\Http\Controllers\Admin\TestController as AdminTestController;
+//use App\Http\Controllers\Admin\TestController as AdminTestController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Front\AbsenceController;
 use App\Http\Controllers\Front\AtelierController;
@@ -160,23 +160,23 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
 // 4. ROUTES DE TESTS TECHNIQUES
 // =========================================================================
 
-Route::middleware('web')->group(function () {
-    Route::get('/test/blade', [AdminTestController::class, 'blade'])->name('test.blade');
-    Route::post('/test/blade', [AdminTestController::class, 'bladePost'])->name('test.bladePost');
+// Route::middleware('web')->group(function () {
+//     Route::get('/test/blade', [AdminTestController::class, 'blade'])->name('test.blade');
+//     Route::post('/test/blade', [AdminTestController::class, 'bladePost'])->name('test.bladePost');
 
-    Route::get('/validation-test', function () {
-        $validator = Validator::make(
-            ['test' => 'abcdefghijklmnopqrstuv', 'test2' => 'lol'],
-            ['test' => 'string|max:30', 'test2' => 'boolean']
-        );
+//     Route::get('/validation-test', function () {
+//         $validator = Validator::make(
+//             ['test' => 'abcdefghijklmnopqrstuv', 'test2' => 'lol'],
+//             ['test' => 'string|max:30', 'test2' => 'boolean']
+//         );
 
-        return [
-            'fails' => $validator->fails(),
-            'errors' => $validator->errors()->all(),
-            'passes' => $validator->passes(),
-        ];
-    });
-});
+//         return [
+//             'fails' => $validator->fails(),
+//             'errors' => $validator->errors()->all(),
+//             'passes' => $validator->passes(),
+//         ];
+//     });
+// });
 
 // =========================================================================
 // 5. PANNEAU D’ADMINISTRATION
@@ -188,9 +188,9 @@ Route::middleware([
     CheckAdminRole::class,
     HandlePrecognitiveRequests::class,
 ])->prefix('admin')->group(function () {
-    // Tests internes
-    Route::get('/test', [AdminTestController::class, 'index'])->name('test.index');
-    Route::get('/test/redux', [AdminTestController::class, 'redux'])->name('test.redux');
+    // // Tests internes
+    // Route::get('/test', [AdminTestController::class, 'index'])->name('test.index');
+    // Route::get('/test/redux', [AdminTestController::class, 'redux'])->name('test.redux');
 
     // Tableau de bord principal
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard.index');

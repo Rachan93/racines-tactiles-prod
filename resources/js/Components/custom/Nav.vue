@@ -22,6 +22,8 @@ import {
     ExternalLink,
 } from "lucide-vue-next";
 import CookieBanner from "@/Components/custom/CookieBanner.vue";
+import "vue-sonner/style.css";
+import Toaster from "@/Components/ui/sonner/Sonner.vue";
 const page = usePage();
 const currentUser = computed(() => page.props.auth?.user);
 const isAdmin = computed(() => Number(currentUser.value?.role_id) === 1);
@@ -472,4 +474,5 @@ const logout = () => {
         </div>
     </header>
     <CookieBanner />
+    <Toaster richColors position="top-right" />
 </template>

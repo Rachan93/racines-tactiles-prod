@@ -207,11 +207,7 @@ const confirmDelete = () => {
             >
                 <div>
                     <div class="flex items-center gap-2">
-                        <div
-                            class="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"
-                        >
-                            <CircleHelp class="h-5 w-5" />
-                        </div>
+                       
 
                         <div>
                             <h1

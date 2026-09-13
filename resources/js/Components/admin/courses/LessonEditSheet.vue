@@ -78,11 +78,9 @@ const props = defineProps({
 
 const emit = defineEmits(["update:open", "saved", "deleted"]);
 
-// Dialogue de confirmation de suppression
 const isDeleteDialogOpen = ref(false);
 const isDeleting = ref(false);
 
-// Formulaire Precognition
 const form = useForm(
     "patch",
     () => (props.lesson ? route("lessons.update", { lesson: props.lesson.id }) : ""),
@@ -100,7 +98,6 @@ const form = useForm(
     }
 );
 
-// Synchronisation des valeurs à chaque ouverture
 const populateForm = (newLesson) => {
     if (!newLesson) return;
 
@@ -140,15 +137,13 @@ watch(
     { deep: true }
 );
 
-// Effectifs inscrits réels
 const bookedWheel = computed(() => props.lesson?.spots?.wheel_booked || 0);
 const bookedHand = computed(() => props.lesson?.spots?.handbuilding_booked || 0);
 const totalBooked = computed(() => props.lesson?.spots?.total_booked || 0);
 
-// Règle métier : suppression uniquement si 0 inscrit
+
 const canDelete = computed(() => totalBooked.value === 0);
 
-// Validation réactive des capacités face aux inscrits
 const hasWheelCapacityError = computed(() => {
     return form.is_overridden && Number(form.override_spots_max_wheel) < bookedWheel.value;
 });
@@ -157,7 +152,6 @@ const hasHandCapacityError = computed(() => {
     return form.is_overridden && Number(form.override_spots_max_handbuilding) < bookedHand.value;
 });
 
-// Palette de couleur du type de cours
 const getTypeBadgeClass = (typeName) => {
     const name = (typeName || "").toLowerCase();
     if (name.includes("collectif")) {
@@ -172,7 +166,6 @@ const getTypeBadgeClass = (typeName) => {
     return "bg-secondary text-secondary-foreground border-transparent";
 };
 
-// Rétablir les paramètres par défaut du cours
 const handleResetToDefault = () => {
     if (!props.course) return;
 
@@ -192,7 +185,6 @@ const close = () => {
     emit("update:open", false);
 };
 
-// Enregistrement de la séance
 const submit = () => {
     if (!props.lesson) return;
 
@@ -213,7 +205,6 @@ const submit = () => {
     });
 };
 
-// Suppression de la séance (uniquement 0 inscrit)
 const executeDelete = () => {
     if (!props.lesson || !canDelete.value) return;
 
@@ -293,7 +284,7 @@ const executeDelete = () => {
                 <!-- 1. BLOC PERSONNALISATION (OVERRIDE) - TOUJOURS VISIBLE   -->
                 <!-- ========================================================= -->
                 <div
-                    class="rounded-xl border p-4.5 space-y-4 transition-all duration-200"
+                    class="rounded-xl border p-5 space-y-4 transition-all duration-200"
                     :class="form.is_overridden ? 'border-primary/40 bg-primary/5 shadow-xs' : 'border-border bg-card'"
                 >
                     <!-- En-tête du bloc avec Switch Personnalisée -->
@@ -467,7 +458,7 @@ const executeDelete = () => {
                 <!-- 2. BLOC ANNULATION EXCEPTIONNELLE - TOUJOURS VISIBLE      -->
                 <!-- ========================================================= -->
                 <div
-                    class="rounded-xl border p-4.5 space-y-3.5 transition-all duration-200"
+                    class="rounded-xl border p-5 space-y-3.5 transition-all duration-200"
                     :class="form.is_cancelled ? 'border-destructive/40 bg-destructive/5 shadow-xs' : 'border-border bg-card'"
                 >
                     <!-- En-tête avec Switch Annulée -->

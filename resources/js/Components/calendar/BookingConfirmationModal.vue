@@ -226,7 +226,7 @@ const handleSubmit = () => {
             const isMakeup = props.mode === "makeup";
             toast.success(
                 isMakeup
-                    ? "Rattrapage positionné !"
+                    ? "Rattrapage placé !"
                     : "Réservation confirmée !",
                 {
                     description: isMakeup

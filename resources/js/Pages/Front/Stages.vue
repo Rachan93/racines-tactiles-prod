@@ -40,6 +40,9 @@ const getLang = (stageId) => activeLangs.value[stageId] || "fr";
 const setLang = (stageId, lang) => {
     activeLangs.value[stageId] = lang;
 };
+const isEnglish = (stage) => getLang(stage.id) === "en";
+
+const stageText = (stage, fr, en) => (isEnglish(stage) ? en : fr);
 
 const getStageTitle = (stage) =>
     getLang(stage.id) === "en" && stage.name_en ? stage.name_en : stage.name;
@@ -104,14 +107,26 @@ const getRemainingSpots = (stage) => {
     );
 };
 
+const formatLocalizedDate = (date, lang) => {
+    if (!date) return "";
+
+    return new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "fr-BE", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+    }).format(new Date(`${date}T00:00:00`));
+};
+
 const formatStageDates = (stage) => {
     if (!stage.first_lesson_date) return "";
 
+    const lang = getLang(stage.id);
+
     if (stage.end_date && stage.end_date !== stage.first_lesson_date) {
-        return formatDateRange(stage.first_lesson_date, stage.end_date);
+        return `${formatLocalizedDate(stage.first_lesson_date, lang)} – ${formatLocalizedDate(stage.end_date, lang)}`;
     }
 
-    return formatDate(stage.first_lesson_date);
+    return formatLocalizedDate(stage.first_lesson_date, lang);
 };
 </script>
 
@@ -236,8 +251,16 @@ const formatStageDates = (stage) => {
                                         >
                                             {{
                                                 stage.cover_image
-                                                    ? "Photo indisponible"
-                                                    : "Photo à venir"
+                                                    ? stageText(
+                                                          stage,
+                                                          "Photo indisponible",
+                                                          "Photo unavailable",
+                                                      )
+                                                    : stageText(
+                                                          stage,
+                                                          "Photo à venir",
+                                                          "Photo coming soon",
+                                                      )
                                             }}
                                         </span>
                                     </div>
@@ -251,10 +274,14 @@ const formatStageDates = (stage) => {
                                             class="bg-emerald-600 hover:bg-emerald-600 text-white font-semibold text-xs px-3 py-1 shadow-xs"
                                         >
                                             {{
-                                                pluralize(
-                                                    getRemainingSpots(stage),
-                                                    "place restante",
-                                                )
+                                                isEnglish(stage)
+                                                    ? `${getRemainingSpots(stage)} ${getRemainingSpots(stage) === 1 ? "spot left" : "spots left"}`
+                                                    : pluralize(
+                                                          getRemainingSpots(
+                                                              stage,
+                                                          ),
+                                                          "place restante",
+                                                      )
                                             }}
                                         </Badge>
                                         <Badge
@@ -262,7 +289,13 @@ const formatStageDates = (stage) => {
                                             variant="destructive"
                                             class="bg-red-600 text-white font-semibold text-xs px-3 py-1 shadow-xs"
                                         >
-                                            Complet
+                                            {{
+                                                stageText(
+                                                    stage,
+                                                    "Complet",
+                                                    "Fully booked",
+                                                )
+                                            }}
                                         </Badge>
                                     </div>
                                 </div>
@@ -284,7 +317,13 @@ const formatStageDates = (stage) => {
                                                     class="w-4 h-4 text-gray-400 shrink-0"
                                                 />
                                                 <span v-if="stage.instructor">
-                                                    Animé par
+                                                    {{
+                                                        stageText(
+                                                            stage,
+                                                            "Animé par",
+                                                            "Led by",
+                                                        )
+                                                    }}
                                                     <strong
                                                         class="text-gray-900 font-semibold"
                                                     >
@@ -294,8 +333,15 @@ const formatStageDates = (stage) => {
                                                         }}
                                                     </strong>
                                                 </span>
+
                                                 <span v-else>
-                                                    Intervenant de l'atelier
+                                                    {{
+                                                        stageText(
+                                                            stage,
+                                                            "Intervenant de l'atelier",
+                                                            "Studio instructor",
+                                                        )
+                                                    }}
                                                 </span>
                                             </div>
 
@@ -398,8 +444,13 @@ const formatStageDates = (stage) => {
                                                     class="w-3.5 h-3.5 text-stone-600 shrink-0"
                                                 />
                                                 <span>
-                                                    Informations pratiques &
-                                                    Prérequis
+                                                    {{
+                                                        stageText(
+                                                            stage,
+                                                            "Informations pratiques & prérequis",
+                                                            "Practical information & prerequisites",
+                                                        )
+                                                    }}
                                                 </span>
                                             </div>
                                             <p
@@ -464,7 +515,13 @@ const formatStageDates = (stage) => {
                                                 <span
                                                     class="block text-[11px] text-gray-400 uppercase font-medium"
                                                 >
-                                                    Tarif
+                                                    {{
+                                                        stageText(
+                                                            stage,
+                                                            "Tarif",
+                                                            "Price",
+                                                        )
+                                                    }}
                                                 </span>
                                                 <span
                                                     class="text-xl font-bold text-gray-900"
@@ -497,11 +554,27 @@ const formatStageDates = (stage) => {
                                                 >
                                                     {{
                                                         currentUser
-                                                            ? "Réserver ce stage"
-                                                            : "Se connecter pour réserver"
+                                                            ? stageText(
+                                                                  stage,
+                                                                  "Réserver ce stage",
+                                                                  "Book this masterclass",
+                                                              )
+                                                            : stageText(
+                                                                  stage,
+                                                                  "Se connecter pour réserver",
+                                                                  "Sign in to book",
+                                                              )
                                                     }}
                                                 </span>
-                                                <span v-else>Complet</span>
+                                                <span v-else>
+                                                    {{
+                                                        stageText(
+                                                            stage,
+                                                            "Complet",
+                                                            "Fully booked",
+                                                        )
+                                                    }}
+                                                </span>
                                                 <ArrowRight
                                                     v-if="
                                                         getRemainingSpots(
