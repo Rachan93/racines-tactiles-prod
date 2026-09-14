@@ -6,7 +6,7 @@
 
     <title>Paiement requis — {{ config('racines.name') }}</title>
 
-    @vite(['resources/css/app.css'])
+    @vite(['resources/js/app.js'])
 </head>
 
 <body class="bg-white font-brand text-gray-900">
